@@ -1,0 +1,14 @@
+model NotificationSettings {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  remind48h    Boolean  @default(false)
+  remind24h    Boolean  @default(true)
+  remind2h     Boolean  @default(false)
+  channelSms   Boolean  @default(true)
+  channelEmail Boolean  @default(false)
+  autoFollowUp Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([userId])
+}

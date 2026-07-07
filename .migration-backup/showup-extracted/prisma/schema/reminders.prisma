@@ -1,0 +1,97 @@
+// Appointment reminders — SMS-driven scheduling and reply tracking.
+
+enum AppointmentStatus {
+  PENDING
+  REMINDED
+  CONFIRMED
+  CANCELLED
+  RESCHEDULE_REQUESTED
+}
+
+enum IntegrationProvider {
+  google_calendar
+  microsoft_outlook
+  fresha
+  opus_dental
+  tripletex
+  booksy
+  automaster
+  emekaniker
+  visma
+  fiken
+  cliniko
+}
+
+enum IntegrationStatus {
+  connected
+  disconnected
+  error
+  syncing
+}
+
+model Customer {
+  id           String        @id @default(cuid())
+  userId       String?
+  name         String
+  phone        String?
+  email        String?
+  externalId   String?
+  source       String?
+  appointments Appointment[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([userId, externalId, source])
+  @@index([externalId])
+  @@index([source])
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  clientName  String
+  clientPhone String
+  scheduledAt DateTime
+  reminderAt  DateTime
+  status      AppointmentStatus @default(PENDING)
+  twilioSid   String?
+  customerId  String?
+  externalId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([status, reminderAt])
+  @@index([customerId])
+  @@index([externalId])
+}
+
+model Integration {
+  id                   String              @id @default(cuid())
+  userId               String
+  provider             IntegrationProvider
+  status               IntegrationStatus   @default(disconnected)
+  credentialsEncrypted String              @default("")
+  lastSyncedAt         DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  syncedAppointments   SyncedAppointment[]
+
+  @@unique([userId, provider])
+  @@index([userId])
+  @@index([status])
+}
+
+model SyncedAppointment {
+  id              String      @id @default(cuid())
+  userId          String
+  integrationId   String
+  externalId      String
+  appointmentData Json
+  syncedAt        DateTime    @default(now())
+  integration     Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, externalId])
+  @@index([userId])
+  @@index([integrationId])
+}

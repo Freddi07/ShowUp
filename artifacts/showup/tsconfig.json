@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*"],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    "**/*.test.ts",
+    "src/app/_api_nextjs_backup/**",
+    "src/app/_health_backup/**",
+    "src/app/_opengraph-image.tsx.bak",
+    "src/app/_robots.ts.bak",
+    "src/app/_sitemap.ts.bak",
+    "src/app/_manifest.ts.bak",
+    "src/lib/integrations/**",
+    "src/lib/stripe-billing/**",
+    "src/lib/stripe.ts",
+    "src/lib/auth-config.ts",
+    "src/lib/business/**",
+    "src/lib/customers/**",
+    "src/lib/email/**"
+  ],
+  "compilerOptions": {
+    "noEmit": true,
+    "jsx": "preserve",
+    "lib": ["esnext", "dom", "dom.iterable"],
+    "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "types": ["node", "vite/client"],
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "references": [
+    {
+      "path": "../../lib/api-client-react"
+    }
+  ]
+}

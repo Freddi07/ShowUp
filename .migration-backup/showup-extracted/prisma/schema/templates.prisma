@@ -1,0 +1,23 @@
+enum TemplateType {
+  reminder_24h
+  reminder_2h
+  confirmation
+}
+
+enum TemplateLanguage {
+  no
+  en
+}
+
+model MessageTemplate {
+  id        String           @id @default(cuid())
+  userId    String
+  type      TemplateType
+  language  TemplateLanguage @default(no)
+  body      String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([userId, type, language])
+  @@index([userId])
+}

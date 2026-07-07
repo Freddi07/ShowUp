@@ -1,0 +1,16 @@
+model UserProfile {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique      // scalar FK to auth User.id — NO @relation (auth.prisma is locked)
+  businessType           String?               // nullable: set after sign-up via PATCH /api/profile
+  phone                  String?
+  trialStartDate         DateTime
+  trialEndsAt            DateTime
+  stripeCustomerId       String?
+  stripePaymentMethodId  String?
+  paymentMethodCollected Boolean   @default(false)
+  subscriptionStatus     String?               // values: 'trialing' | 'active' | 'canceled' | 'past_due'
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([userId])
+}

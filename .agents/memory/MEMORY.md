@@ -1,0 +1,1 @@
+- [ShowUp Vite port decisions](showup-port.md) — Next.js→Vite migration: key shims, file layout, package boundaries
