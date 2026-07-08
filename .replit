@@ -29,6 +29,7 @@ VITE_CHECKOUT_URL_STARTER = "https://buy.stripe.com/test_4gMaEWfmh9oaePE90d4Vy04
 ADMIN_EMAILS = "snillefredrik@gmail.com"
 VITE_ENABLE_GOOGLE_AUTH = "true"
 MESSAGEBIRD_WEBHOOK_TOKEN = "1357331ad179c070a0b0364f65f36feac0b2664d9ef55f3c"
+MESSAGEBIRD_WORKSPACE_ID = "ws_01kx1x8ghbene9xgqdgy3dwxhx"
 
 [nix]
 channel = "stable-25_05"
