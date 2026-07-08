@@ -6,6 +6,11 @@ export const userProfileTable = pgTable(
     id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
     userId: text("userId").notNull().unique(),
     businessType: text("businessType"),
+    // Onboarding wizard state. `onboardingCompleted` gates the first-run wizard;
+    // `enabledSections` is a JSON array of optional dashboard section keys the
+    // user chose to show (null = not onboarded / show everything).
+    onboardingCompleted: boolean("onboardingCompleted").notNull().default(false),
+    enabledSections: text("enabledSections"),
     phone: text("phone"),
     trialStartDate: timestamp("trialStartDate").notNull(),
     trialEndsAt: timestamp("trialEndsAt").notNull(),

@@ -15,6 +15,7 @@ import statsRouter from "./stats";
 import notificationSettingsRouter from "./notification-settings";
 import pushRouter from "./push";
 import mobileOauthRouter from "./mobile-oauth";
+import onboardingRouter from "./onboarding";
 
 const router: IRouter = Router();
 
@@ -26,6 +27,9 @@ router.use("/auth", authRouter);
 
 // Native social sign-in bridge for the Expo app (in-app browser OAuth).
 router.use("/mobile-oauth", mobileOauthRouter);
+
+// First-run onboarding wizard state.
+router.use("/onboarding", onboardingRouter);
 
 // Trial & billing
 router.use("/trial", trialRouter);

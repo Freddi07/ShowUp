@@ -35,7 +35,7 @@ const queryClient = new QueryClient({
 });
 
 function RootLayoutNav() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, onboarding } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -43,12 +43,24 @@ function RootLayoutNav() {
     if (isLoading) return;
     const publicRoutes = new Set(['login', 'forgot-password']);
     const inPublic = publicRoutes.has(segments[0] as string);
+    const inOnboarding = segments[0] === 'onboarding';
     if (!user && !inPublic) {
       router.replace('/login');
-    } else if (user && inPublic) {
-      router.replace('/(tabs)');
+      return;
     }
-  }, [user, isLoading, segments, router]);
+    if (user) {
+      // Wait until onboarding status is resolved before routing into the app,
+      // so a not-yet-onboarded user is never allowed to slip past the wizard
+      // while the status is still loading (or failed and is being retried).
+      if (!onboarding) return;
+      const needsOnboarding = !onboarding.onboardingCompleted;
+      if (needsOnboarding && !inOnboarding) {
+        router.replace('/onboarding');
+      } else if (!needsOnboarding && (inPublic || inOnboarding)) {
+        router.replace('/(tabs)');
+      }
+    }
+  }, [user, isLoading, onboarding, segments, router]);
 
   // Register for push notifications once the user is signed in. Push is a
   // native-only feature — the expo-notifications APIs throw on the web build,
@@ -100,6 +112,7 @@ function RootLayoutNav() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
       <Stack.Screen name="forgot-password" />
+      <Stack.Screen name="onboarding" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="customer/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="account" options={{ presentation: 'card' }} />

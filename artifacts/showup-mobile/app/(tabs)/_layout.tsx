@@ -7,28 +7,39 @@ import { isLiquidGlassAvailable } from 'expo-glass-effect';
 import { Tabs } from 'expo-router';
 import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { SymbolView } from 'expo-symbols';
+import { useAuth } from '@/context/AuthContext';
+import { isSectionEnabled } from '@/lib/onboarding';
+
+interface TabVisibility {
+  showCustomers: boolean;
+  showReplies: boolean;
+}
 
 // iOS 26 liquid-glass native tabs. System appearance, no custom tokens.
-function NativeTabLayout() {
+function NativeTabLayout({ showCustomers, showReplies }: TabVisibility) {
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="index">
         <Icon sf={{ default: 'calendar', selected: 'calendar' }} />
         <Label>Avtaler</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="customers">
-        <Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} />
-        <Label>Kunder</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="replies">
-        <Icon
-          sf={{
-            default: 'bubble.left.and.bubble.right',
-            selected: 'bubble.left.and.bubble.right.fill',
-          }}
-        />
-        <Label>Svar</Label>
-      </NativeTabs.Trigger>
+      {showCustomers && (
+        <NativeTabs.Trigger name="customers">
+          <Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} />
+          <Label>Kunder</Label>
+        </NativeTabs.Trigger>
+      )}
+      {showReplies && (
+        <NativeTabs.Trigger name="replies">
+          <Icon
+            sf={{
+              default: 'bubble.left.and.bubble.right',
+              selected: 'bubble.left.and.bubble.right.fill',
+            }}
+          />
+          <Label>Svar</Label>
+        </NativeTabs.Trigger>
+      )}
       <NativeTabs.Trigger name="more">
         <Icon sf={{ default: 'ellipsis.circle', selected: 'ellipsis.circle.fill' }} />
         <Label>Mer</Label>
@@ -37,7 +48,7 @@ function NativeTabLayout() {
   );
 }
 
-function ClassicTabLayout() {
+function ClassicTabLayout({ showCustomers, showReplies }: TabVisibility) {
   const colors = useColors();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
@@ -88,13 +99,18 @@ function ClassicTabLayout() {
       />
       <Tabs.Screen
         name="customers"
-        options={{ title: 'Kunder', tabBarIcon: tabIcon('person.2', 'users') }}
+        options={{
+          title: 'Kunder',
+          tabBarIcon: tabIcon('person.2', 'users'),
+          href: showCustomers ? undefined : null,
+        }}
       />
       <Tabs.Screen
         name="replies"
         options={{
           title: 'Svar',
           tabBarIcon: tabIcon('bubble.left.and.bubble.right', 'message-circle'),
+          href: showReplies ? undefined : null,
         }}
       />
       <Tabs.Screen
@@ -109,8 +125,17 @@ function ClassicTabLayout() {
 }
 
 export default function TabLayout() {
+  const { onboarding } = useAuth();
+  const enabled = onboarding?.enabledSections ?? null;
+  const showCustomers = isSectionEnabled('kunder', enabled);
+  const showReplies = isSectionEnabled('svar', enabled);
+
   if (isLiquidGlassAvailable()) {
-    return <NativeTabLayout />;
+    return (
+      <NativeTabLayout showCustomers={showCustomers} showReplies={showReplies} />
+    );
   }
-  return <ClassicTabLayout />;
+  return (
+    <ClassicTabLayout showCustomers={showCustomers} showReplies={showReplies} />
+  );
 }

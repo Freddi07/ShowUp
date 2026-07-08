@@ -25,6 +25,10 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { apiFetch } from '@/lib/api-client';
 import { authClient } from '@/lib/auth-client';
+import { useOnboardingStatus, useUpdateOnboarding } from '@/hooks/use-onboarding';
+import { SECTION_META } from '@/lib/onboarding';
+import { cn } from '@/lib/utils';
+import { Check } from 'lucide-react';
 import { type FakturaItem, FakturaList } from '@/lib/contracts/fakturaer';
 import { KontoProfile, type KontoProfile as KontoProfileType } from '@/lib/contracts/konto';
 import { type TrialStatus, TrialStatusSchema } from '@/lib/contracts/stripe';
@@ -247,6 +251,93 @@ function ProfileSection({ profile }: { profile: KontoProfileType }) {
   );
 }
 
+function SectionsSection() {
+  const { data: onboarding } = useOnboardingStatus();
+  const update = useUpdateOnboarding();
+  const [selected, setSelected] = useState<string[] | null>(null);
+
+  // Initialise from the saved state once it loads (null = everything on).
+  useEffect(() => {
+    if (onboarding && selected === null) {
+      setSelected(onboarding.enabledSections ?? SECTION_META.map((s) => s.key));
+    }
+  }, [onboarding, selected]);
+
+  const current = selected ?? SECTION_META.map((s) => s.key);
+
+  function toggle(key: string) {
+    setSelected((prev) => {
+      const base = prev ?? SECTION_META.map((s) => s.key);
+      return base.includes(key)
+        ? base.filter((k) => k !== key)
+        : [...base, key];
+    });
+  }
+
+  async function save() {
+    try {
+      await update.mutateAsync({ enabledSections: current });
+      toast.success('Dashbord oppdatert');
+    } catch {
+      toast.error('Kunne ikke lagre valg');
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Tilpass dashbord</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Velg hvilke deler av dashbordet du vil se. Oversikt, Varsler og Konto
+          vises alltid.
+        </p>
+        <div className="flex flex-col gap-2">
+          {SECTION_META.map((s) => {
+            const active = current.includes(s.key);
+            return (
+              <button
+                key={s.key}
+                type="button"
+                onClick={() => toggle(s.key)}
+                className={cn(
+                  'flex items-center justify-between gap-4 rounded-lg border px-4 py-3 text-left transition-colors',
+                  active
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50 hover:bg-secondary/50',
+                )}
+              >
+                <span>
+                  <span className="block text-sm font-medium text-foreground">
+                    {s.label}
+                  </span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    {s.description}
+                  </span>
+                </span>
+                <span
+                  className={cn(
+                    'flex size-5 shrink-0 items-center justify-center rounded border transition-colors',
+                    active
+                      ? 'border-primary bg-primary text-primary-foreground'
+                      : 'border-border',
+                  )}
+                >
+                  {active && <Check className="size-3.5" />}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <Button type="button" disabled={update.isPending} onClick={save}>
+          {update.isPending ? 'Lagrer…' : 'Lagre valg'}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 const PLAN_LABELS: Record<string, string> = {
   starter: 'Starter',
   pro: 'Pro',
@@ -447,6 +538,7 @@ export function KontoPage() {
       ) : (
         <ProfileSection profile={profile} />
       )}
+      <SectionsSection />
       <SubscriptionSection />
       <FakturaSection />
     </div>

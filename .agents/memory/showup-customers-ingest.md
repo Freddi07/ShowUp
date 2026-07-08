@@ -84,3 +84,11 @@ ingest) is the supported way to get customers in. Don't claim a platform is "con
 **How to apply:** for additive, safe schema changes (new nullable column, unique on all-NULL column), apply the
 `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` / `ADD CONSTRAINT` directly via SQL, then update the Drizzle schema
 file so code matches. Reserve push for local/interactive use.
+
+## @workspace/db is a COMPOSITE TS project — editing schema alone leaves consumers on stale types
+After editing `lib/db/src/schema/*.ts` (e.g. adding a column), `@workspace/api-server` typecheck can keep
+failing with `Property 'x' does not exist` because api-server reads `@workspace/db`'s **built `dist/*.d.ts`**
+(project references), which is stale. The db package has NO `build`/`typecheck` script.
+**How to apply:** rebuild its declarations with `npx tsc -b lib/db/tsconfig.json --force`, then re-run the
+consumer typecheck. (The runtime `exports` point at `src/*.ts`, so the app runs fine — only tsc project-ref
+consumers see the stale dist.)

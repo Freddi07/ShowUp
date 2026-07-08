@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { isAdminEmail } from '@/lib/admin-config';
 import { apiFetch } from '@/lib/api-client';
 import { signOut, useSession } from '@/lib/auth-client';
+import { useOnboardingStatus } from '@/hooks/use-onboarding';
 import { DashboardNav } from './dashboard-nav';
 
 export interface DashboardShellProps {
@@ -22,6 +23,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
   const router = useRouter();
   const isAdmin = isAdminEmail(session?.user?.email);
   const [trialChecked, setTrialChecked] = useState(false);
+  const { data: onboarding, isError: onboardingError } = useOnboardingStatus();
 
   useEffect(() => {
     if (!isPending && !session?.user) {
@@ -49,6 +51,19 @@ export function DashboardShell({ children }: DashboardShellProps) {
     }
   }, [isPending, isAdmin, router, session?.user]);
 
+  // Send users who haven't finished onboarding to the wizard first.
+  useEffect(() => {
+    if (
+      !isPending &&
+      session?.user &&
+      !isAdmin &&
+      onboarding &&
+      !onboarding.onboardingCompleted
+    ) {
+      router.replace('/onboarding');
+    }
+  }, [isPending, isAdmin, onboarding, router, session?.user]);
+
   async function handleSignOut() {
     await signOut();
     router.replace('/login');
@@ -70,10 +85,18 @@ export function DashboardShell({ children }: DashboardShellProps) {
     );
   }
 
-  if (!trialChecked && !isAdmin) {
+  if (!isAdmin && (!trialChecked || (!onboarding && !onboardingError))) {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-background px-gutter">
         <p className="text-sm text-muted-foreground">Laster inn…</p>
+      </main>
+    );
+  }
+
+  if (!isAdmin && onboarding && !onboarding.onboardingCompleted) {
+    return (
+      <main className="flex min-h-dvh items-center justify-center bg-background px-gutter">
+        <p className="text-sm text-muted-foreground">Omdirigerer…</p>
       </main>
     );
   }

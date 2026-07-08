@@ -16,9 +16,16 @@ import { Link } from 'wouter';
 import { usePathname } from '@/lib/compat/next-navigation';
 import { isAdminEmail } from '@/lib/admin-config';
 import { useSession } from '@/lib/auth-client';
+import { useOnboardingStatus } from '@/hooks/use-onboarding';
+import { isSectionEnabled, type SectionKey } from '@/lib/onboarding';
 import { cn } from '@/lib/utils';
 
-const navItems = [
+const navItems: {
+  href: string;
+  label: string;
+  icon: typeof LayoutDashboard;
+  sectionKey?: SectionKey;
+}[] = [
   {
     href: '/dashboard',
     label: 'Oversikt',
@@ -28,26 +35,31 @@ const navItems = [
     href: '/dashboard/integrations',
     label: 'Integrasjoner',
     icon: Plug,
+    sectionKey: 'integrations',
   },
   {
     href: '/dashboard/kunder',
     label: 'Kunder',
     icon: Users,
+    sectionKey: 'kunder',
   },
   {
     href: '/dashboard/statistikk',
     label: 'Statistikk',
     icon: BarChart2,
+    sectionKey: 'statistikk',
   },
   {
     href: '/dashboard/maler',
     label: 'Meldingsmaler',
     icon: MessageSquare,
+    sectionKey: 'maler',
   },
   {
     href: '/dashboard/svar',
     label: 'Svar',
     icon: Mail,
+    sectionKey: 'svar',
   },
   {
     href: '/dashboard/innstillinger/varsler',
@@ -64,14 +76,20 @@ const navItems = [
 export function DashboardNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
+  const { data: onboarding } = useOnboardingStatus();
   const isAdmin = isAdminEmail(session?.user?.email);
+  const visibleItems = navItems.filter(
+    (item) =>
+      !item.sectionKey ||
+      isSectionEnabled(item.sectionKey, onboarding?.enabledSections),
+  );
 
   return (
     <nav
       aria-label="Dashboard"
       className="flex gap-2 overflow-x-auto pb-1 lg:grid lg:overflow-visible lg:pb-0"
     >
-      {navItems.map((item) => {
+      {visibleItems.map((item) => {
         const Icon = item.icon;
         const active = pathname === item.href;
 

@@ -24,6 +24,8 @@ import ResetPasswordPage from '@/app/(auth)/reset-password/page';
 // @ts-ignore
 import ProfilePage from '@/app/(auth)/profile/page';
 // @ts-ignore
+import OnboardingPage from '@/app/(onboarding)/page';
+// @ts-ignore
 import DashboardPage from '@/app/(dashboard)/dashboard/page';
 // @ts-ignore
 import StatistikkPage from '@/app/(dashboard)/dashboard/statistikk/page';
@@ -70,6 +72,7 @@ function Router() {
       <Route path="/forgot-password" component={ForgotPasswordPage} />
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/profile" component={ProfilePage} />
+      <Route path="/onboarding" component={OnboardingPage} />
       <Route path="/upgrade" component={UpgradePage} />
       <Route path="/integrasjoner" component={IntegrasjonerPage} />
       <Route path="/example" component={ExamplePage} />

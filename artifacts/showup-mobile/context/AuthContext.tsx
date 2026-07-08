@@ -15,11 +15,17 @@ import {
   signInWithGoogle as doGoogleSignIn,
   signOut as doSignOut,
 } from '@/lib/auth';
+import {
+  fetchOnboarding,
+  type OnboardingStatus,
+} from '@/lib/onboarding';
 import { unregisterForPushNotifications } from '@/lib/notifications';
 
 interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
+  onboarding: OnboardingStatus | null;
+  refreshOnboarding: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -30,7 +36,22 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [onboarding, setOnboarding] = useState<OnboardingStatus | null>(null);
   const queryClient = useQueryClient();
+
+  const refreshOnboarding = useCallback(async () => {
+    const status = await fetchOnboarding();
+    setOnboarding(status);
+  }, []);
+
+  // Keep onboarding state in sync with the signed-in user.
+  useEffect(() => {
+    if (user) {
+      refreshOnboarding();
+    } else {
+      setOnboarding(null);
+    }
+  }, [user, refreshOnboarding]);
 
   // Restore session on startup: if a token exists, validate it via /me.
   useEffect(() => {
@@ -78,8 +99,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [queryClient]);
 
   const value = useMemo(
-    () => ({ user, isLoading, signIn, signInWithGoogle, signOut }),
-    [user, isLoading, signIn, signInWithGoogle, signOut],
+    () => ({
+      user,
+      isLoading,
+      onboarding,
+      refreshOnboarding,
+      signIn,
+      signInWithGoogle,
+      signOut,
+    }),
+    [user, isLoading, onboarding, refreshOnboarding, signIn, signInWithGoogle, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
