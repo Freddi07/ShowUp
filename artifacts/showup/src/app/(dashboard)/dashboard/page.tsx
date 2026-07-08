@@ -1,87 +1,34 @@
 // @polsia:user-owned
 'use client';
 
-import { Activity, CheckCircle, CreditCard, ShieldCheck, Users, X } from 'lucide-react';
+import {
+  ArrowRight,
+  CalendarClock,
+  CheckCircle,
+  FileSpreadsheet,
+  MessageSquare,
+  Plug,
+  Users,
+} from 'lucide-react';
+import { Link } from 'wouter';
 import { useRouter, useSearchParams } from '@/lib/compat/next-navigation';
 import { useEffect, useState } from 'react';
-import { DashboardCard } from '@/components/custom/dashboard/dashboard-card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/api-client';
 import { useSession } from '@/lib/auth-client';
+import { CustomerList } from '@/lib/contracts/customer';
+import { StatsResponse, type StatsResponse as StatsResponseType } from '@/lib/contracts/stats';
 import { type TrialStatus, TrialStatusSchema } from '@/lib/contracts/stripe';
 
-const customerCards = [
-  {
-    title: 'Account',
-    value: 'Active',
-    description: 'Your signed-in workspace is ready.',
-    icon: ShieldCheck,
-  },
-  {
-    title: 'Plan',
-    value: 'Starter',
-    description: 'Connect billing modules when needed.',
-    icon: CreditCard,
-  },
-  {
-    title: 'Activity',
-    value: '0',
-    description: 'Use this space for product events.',
-    icon: Activity,
-  },
-  {
-    title: 'Support',
-    value: 'Open',
-    description: 'Add customer support workflows here.',
-    icon: Users,
-  },
-];
-
-const adminCards = [
-  {
-    title: 'Customers',
-    value: '0',
-    description: 'Admin-only customer operations go here.',
-    icon: Users,
-  },
-  {
-    title: 'Revenue',
-    value: '$0',
-    description: 'Connect billing modules when needed.',
-    icon: CreditCard,
-  },
-  {
-    title: 'Activity',
-    value: '0',
-    description: 'Use this space for product events.',
-    icon: Activity,
-  },
-  {
-    title: 'Access',
-    value: 'Admin',
-    description: 'Role-aware UI powered by better-auth.',
-    icon: ShieldCheck,
-  },
-];
-
-function hasRole(role: string | null | undefined, expected: string) {
-  return (
-    role
-      ?.split(',')
-      .map((item) => item.trim())
-      .includes(expected) ?? false
-  );
-}
-
-function planLabel(status: TrialStatus | null): string {
-  if (!status) return '—';
+function planLabel(status: TrialStatus | null): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
+  if (!status) return { label: '—', variant: 'outline' };
   const s = status.subscriptionStatus;
-  if (s === 'active') return 'Aktiv';
-  if (s === 'canceled') return 'Avsluttet';
-  if (s === 'past_due') return 'Forfalt';
-  if (status.trialActive) return 'Prøveperiode';
-  return 'Ingen plan';
+  if (s === 'active') return { label: 'Aktivt abonnement', variant: 'default' };
+  if (s === 'canceled') return { label: 'Avsluttet', variant: 'destructive' };
+  if (s === 'past_due') return { label: 'Betaling forfalt', variant: 'destructive' };
+  if (status.trialActive) return { label: 'Prøveperiode', variant: 'secondary' };
+  return { label: 'Ingen aktiv plan', variant: 'outline' };
 }
 
 function PaymentSuccessBanner() {
@@ -112,114 +59,206 @@ function PaymentSuccessBanner() {
     <div className="mb-6 flex items-start gap-3 rounded-lg border border-green-500/30 bg-green-500/10 px-4 py-3">
       <CheckCircle className="mt-0.5 size-5 shrink-0 text-green-600" aria-hidden="true" />
       <p className="flex-1 text-sm font-medium text-green-800 dark:text-green-300">
-        Betalingen er bekreftet — ditt abonnement er nå aktivt
+        Betalingen er bekreftet — abonnementet ditt er nå aktivt.
       </p>
-      <button
-        type="button"
-        onClick={() => setVisible(false)}
-        className="shrink-0 text-green-600 hover:text-green-800"
-        aria-label="Lukk"
-      >
-        <X className="size-4" aria-hidden="true" />
-      </button>
     </div>
   );
 }
 
+function MetricCard({
+  title,
+  value,
+  subtitle,
+  icon: Icon,
+}: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <Icon className="size-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-3xl font-bold text-foreground">{value}</div>
+        {subtitle && <p className="mt-1 text-xs text-muted-foreground">{subtitle}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+const QUICK_ACTIONS = [
+  {
+    href: '/dashboard/kunder',
+    title: 'Kunder',
+    description: 'Se, søk og legg til kunder. Importer fra fil.',
+    icon: Users,
+  },
+  {
+    href: '/dashboard/integrations',
+    title: 'Registrer avtaler',
+    description: 'Koble til plattform, importer fil eller bruk API.',
+    icon: Plug,
+  },
+  {
+    href: '/dashboard/maler',
+    title: 'Meldingsmaler',
+    description: 'Tilpass teksten i påminnelsene dine.',
+    icon: MessageSquare,
+  },
+  {
+    href: '/dashboard/statistikk',
+    title: 'Statistikk',
+    description: 'Se hvor mange som møter opp og bekrefter.',
+    icon: CalendarClock,
+  },
+] as const;
+
+const REGISTER_METHODS = [
+  {
+    icon: Plug,
+    title: 'Automatisk via API / Zapier',
+    body: 'Koble booking- eller kalendersystemet ditt til via API-nøkkelen din (Zapier eller Make). Nye kunder og avtaler kommer inn av seg selv.',
+  },
+  {
+    icon: FileSpreadsheet,
+    title: 'Import fra fil (CSV / Excel)',
+    body: 'Last opp en eksportfil. En avtale registreres når raden har både dato/tid og telefonnummer. Kolonner: navn, telefon, dato, tid (eller tidspunkt).',
+  },
+  {
+    icon: CalendarClock,
+    title: 'Manuelt i dashbordet',
+    body: 'Åpne en kunde og trykk «+ Ny avtale». Du kan når som helst endre tidspunkt, status eller sende en påminnelse manuelt.',
+  },
+] as const;
+
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const isAdmin = hasRole(session?.user?.role, 'admin');
-  const summaryCards = isAdmin ? adminCards : customerCards;
-  const [trialStatus, setTrialStatus] = useState<TrialStatus | null>(null);
+  const [trial, setTrial] = useState<TrialStatus | null>(null);
+  const [stats, setStats] = useState<StatsResponseType | null>(null);
+  const [customerCount, setCustomerCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!isAdmin) {
-      apiFetch('/api/trial/status', { schema: TrialStatusSchema })
-        .then(setTrialStatus)
-        .catch(() => {});
-    }
-  }, [isAdmin]);
+    apiFetch('/api/trial/status', { schema: TrialStatusSchema })
+      .then(setTrial)
+      .catch(() => {});
+    apiFetch('/api/stats', { schema: StatsResponse })
+      .then(setStats)
+      .catch(() => {});
+    apiFetch('/api/customers', { schema: CustomerList })
+      .then((d) => setCustomerCount(d.items.length))
+      .catch(() => {});
+  }, []);
+
+  const firstName = (session?.user?.name || session?.user?.email?.split('@')[0] || '').split(' ')[0];
+  const plan = planLabel(trial);
+  const last30 = stats?.last30d;
+  const confirmRate =
+    last30 && last30.sent > 0 ? `${Math.round((last30.confirmed / last30.sent) * 100)}%` : '—';
 
   return (
-    <div className="grid gap-6">
+    <div className="space-y-8">
       <PaymentSuccessBanner />
 
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-muted-foreground">
-            {isAdmin ? 'Admin dashboard' : 'Customer dashboard'}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-normal text-foreground">Overview</h1>
+          <h1 className="text-h2 text-foreground">
+            Hei{firstName ? `, ${firstName}` : ''} 👋
+          </h1>
+          <p className="mt-1 text-muted-foreground">Her er en oversikt over kundene og påminnelsene dine.</p>
         </div>
-        <Badge variant="secondary" className="w-fit">
-          {isAdmin ? 'Admin role' : 'User role'}
-        </Badge>
+        <Badge variant={plan.variant}>{plan.label}</Badge>
+      </div>
+
+      <section className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <MetricCard
+          title="Kunder"
+          value={customerCount ?? '—'}
+          subtitle="Totalt registrert"
+          icon={Users}
+        />
+        <MetricCard
+          title="Påminnelser sendt"
+          value={last30?.sent ?? '—'}
+          subtitle="Siste 30 dager"
+          icon={MessageSquare}
+        />
+        <MetricCard
+          title="Bekreftet"
+          value={last30?.confirmed ?? '—'}
+          subtitle="Siste 30 dager"
+          icon={CheckCircle}
+        />
+        <MetricCard
+          title="Bekreftelsesrate"
+          value={confirmRate}
+          subtitle="Andel som bekreftet"
+          icon={CalendarClock}
+        />
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {summaryCards.map((card) => {
-          const Icon = card.icon;
-          const value = !isAdmin && card.title === 'Plan' ? planLabel(trialStatus) : card.value;
-          return (
-            <DashboardCard
-              key={card.title}
-              title={card.title}
-              description={card.description}
-              action={<Icon aria-hidden="true" className="size-4 text-muted-foreground" />}
-            >
-              <p className="text-2xl font-semibold text-foreground">{value}</p>
-            </DashboardCard>
-          );
-        })}
+      <section>
+        <h2 className="mb-3 text-h4 text-foreground">Hurtigvalg</h2>
+        <div className="grid gap-4 sm:grid-cols-2">
+          {QUICK_ACTIONS.map((a) => {
+            const Icon = a.icon;
+            return (
+              <Link
+                key={a.href}
+                href={a.href}
+                className="group flex items-start gap-4 rounded-lg border border-border bg-card p-4 transition-colors hover:border-primary/40 hover:bg-secondary/40"
+              >
+                <span className="rounded-md bg-secondary p-2 text-secondary-foreground">
+                  <Icon className="size-5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1 font-medium text-foreground">
+                    {a.title}
+                    <ArrowRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </span>
+                  <span className="mt-0.5 block text-sm text-muted-foreground">{a.description}</span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
-        <DashboardCard
-          title="Workspace"
-          description={isAdmin ? 'Owner and operations workflows.' : 'Customer-specific workflow.'}
-        >
-          <div className="grid gap-4">
-            {(isAdmin
-              ? ['Review users', 'Connect admin metrics', 'Add governed data modules']
-              : [
-                  'Define the primary metric',
-                  'Add the first dashboard widget',
-                  'Connect a data module',
-                ]
-            ).map((item) => (
-              <div key={item} className="flex items-center justify-between gap-4">
-                <span className="text-sm font-medium text-foreground">{item}</span>
-                <Badge variant="outline">Next</Badge>
-              </div>
-            ))}
-          </div>
-        </DashboardCard>
-
-        <DashboardCard title="Session" description="Current access state for this shell.">
-          <div className="grid gap-3 text-sm">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Role</span>
-              <span className="font-medium text-foreground">
-                {isAdmin ? 'admin' : (session?.user?.role ?? 'user')}
-              </span>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Auth module</span>
-              <span className="font-medium text-foreground">better-auth</span>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Route</span>
-              <span className="font-medium text-foreground">/dashboard</span>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-muted-foreground">Ownership</span>
-              <span className="font-medium text-foreground">user-owned</span>
-            </div>
-          </div>
-        </DashboardCard>
+      <section>
+        <h2 className="mb-1 text-h4 text-foreground">Slik registreres avtaler</h2>
+        <p className="mb-4 text-sm text-muted-foreground">
+          Avtaler kan komme inn på tre måter. Alle avtaler får automatisk en SMS-påminnelse.
+        </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          {REGISTER_METHODS.map((m) => {
+            const Icon = m.icon;
+            return (
+              <Card key={m.title}>
+                <CardHeader className="pb-2">
+                  <span className="mb-1 inline-flex w-fit rounded-md bg-secondary p-2 text-secondary-foreground">
+                    <Icon className="size-5" />
+                  </span>
+                  <CardTitle className="text-base">{m.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{m.body}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        <div className="mt-4">
+          <Link
+            href="/dashboard/integrations"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+          >
+            Gå til registrering av avtaler
+            <ArrowRight className="size-4" />
+          </Link>
+        </div>
       </section>
     </div>
   );

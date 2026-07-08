@@ -10,6 +10,19 @@ Customers reach the dashboard three ways, all funneling through one upsert helpe
 (`api-server/src/lib/customers.ts` `upsertCustomer`): manual add, CSV import (bulk), and a
 **public API-key endpoint** for automation.
 
+## CSV import can also register appointments — interpret times in Europe/Oslo on the SERVER
+CSV import (`/customers/import`) creates an appointment when a row has a valid date/time AND a phone
+(phone is required: `appointmentTable.clientPhone` is notNull). Dedup on `(customerId, scheduledAt)` so
+re-import is idempotent; reminderAt = 24h before.
+**Why the timezone matters:** the client CSV parser must emit a *naive wall-clock* string
+(`YYYY-MM-DDTHH:MM`, no zone) — NOT convert with browser-local `new Date().toISOString()`. The server
+resolves naive strings against **Europe/Oslo** (offset computed via `Intl.DateTimeFormat` formatToParts,
+handles DST). Otherwise the stored instant shifts by the importer's timezone and dedup breaks on re-import.
+Strings that already carry a zone (…Z / ±HH:MM) are treated as absolute and passed through.
+**How to apply:** any new appointment ingest path (Zapier/API, other imports) must follow the same
+naive-local-vs-absolute rule; never bake browser-local timezone into stored appointment times.
+Also: reject impossible calendar dates (e.g. 31.02) via a round-trip Date check — JS `Date` silently rolls over.
+
 - **Public ingest:** `POST /api/ingest/customers`, authed by a per-user key in header `x-api-key`
   (or Bearer), matched against `userProfile.apiKey` (unique, nullable, `shk_` prefix). No session.
   Intended for Zapier/Make/webhooks so platforms (Fresha, HubSpot, Pipedrive, Calendly, …) add

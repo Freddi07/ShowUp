@@ -26,6 +26,8 @@ export function ImportCustomersDialog({ open, onClose, onImported }: ImportDialo
   const [result, setResult] = useState<CustomerImportResult | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const withAppointment = contacts.filter((c) => c.appointmentAt).length;
+
   function reset() {
     setContacts([]);
     setFileName('');
@@ -83,15 +85,42 @@ export function ImportCustomersDialog({ open, onClose, onImported }: ImportDialo
         }
       }}
     >
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importer kunder fra fil</DialogTitle>
+          <DialogTitle>Importer kunder og avtaler fra fil</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <p className="text-sm text-muted-foreground">
-            Last opp en CSV-fil eksportert fra en annen plattform (Fiken, Fresha, HubSpot, Excel …).
-            Vi finner automatisk kolonnene for navn, telefon og e-post.
+            Last opp en CSV- eller Excel-fil (lagret som CSV) eksportert fra en annen plattform.
+            Vi finner automatisk kolonnene – du trenger ikke å endre overskriftene.
           </p>
+
+          <div className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
+            <p className="mb-2 font-medium text-foreground">Kolonner filen kan inneholde:</p>
+            <ul className="space-y-1">
+              <li>
+                <span className="font-medium text-foreground">Navn</span> – påkrevd (f.eks.{' '}
+                <code>navn</code>, <code>name</code>, <code>kunde</code>)
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Telefon</span> – påkrevd for å sende
+                påminnelser (<code>telefon</code>, <code>mobil</code>, <code>phone</code>)
+              </li>
+              <li>
+                <span className="font-medium text-foreground">E-post</span> – valgfritt
+              </li>
+              <li>
+                <span className="font-medium text-foreground">Dato + tid</span> – tar med en avtale.
+                Bruk <code>dato</code> + <code>tid</code>, eller én kolonne{' '}
+                <code>tidspunkt</code> (f.eks. <code>10.07.2026 14:30</code>).
+              </li>
+            </ul>
+            <p className="mt-2">
+              En avtale registreres kun når raden har <span className="font-medium">både dato/tid
+              og telefonnummer</span>. Påminnelse planlegges automatisk 24 timer før.
+            </p>
+          </div>
+
           <Input
             type="file"
             accept=".csv,.txt,text/csv"
@@ -99,16 +128,26 @@ export function ImportCustomersDialog({ open, onClose, onImported }: ImportDialo
             className="cursor-pointer"
           />
           {fileName && !error && contacts.length > 0 && (
-            <p className="text-sm">
-              <span className="font-medium">{contacts.length}</span> kunder klare til import fra{' '}
-              <span className="font-medium">{fileName}</span>.
-            </p>
+            <div className="text-sm">
+              <p>
+                <span className="font-medium">{contacts.length}</span> kunder klare til import fra{' '}
+                <span className="font-medium">{fileName}</span>.
+              </p>
+              <p className="text-muted-foreground">
+                {withAppointment > 0
+                  ? `${withAppointment} av dem har en avtale som blir registrert.`
+                  : 'Ingen avtaler oppdaget – legg til dato/tid-kolonner for å registrere avtaler.'}
+              </p>
+            </div>
           )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           {result && (
             <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-300">
-              {result.imported} lagt til, {result.updated} oppdatert
+              {result.imported} kunder lagt til, {result.updated} oppdatert
               {result.skipped > 0 ? `, ${result.skipped} hoppet over` : ''}.
+              {result.appointmentsCreated > 0
+                ? ` ${result.appointmentsCreated} avtaler registrert.`
+                : ''}
             </div>
           )}
           <div className="flex justify-end gap-2 pt-1">
