@@ -31,6 +31,30 @@ const APP_URL =
     ? `https://${process.env.REPLIT_DEV_DOMAIN}`
     : `http://localhost:${process.env.PORT ?? 3001}`);
 
+// Optional social sign-in (Google / Apple). Each provider only activates when
+// its OAuth credentials are present, so the app runs fine without them. The
+// OAuth redirect/callback URL for each provider is `${baseURL}/api/auth/callback/<provider>`.
+type SocialProviders = NonNullable<
+  Parameters<typeof betterAuth>[0]["socialProviders"]
+>;
+const socialProviders: SocialProviders = {};
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  socialProviders.google = {
+    clientId: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  };
+}
+if (process.env.APPLE_CLIENT_ID && process.env.APPLE_CLIENT_SECRET) {
+  socialProviders.apple = {
+    clientId: process.env.APPLE_CLIENT_ID,
+    clientSecret: process.env.APPLE_CLIENT_SECRET,
+    // Needed to verify identity tokens issued to the native iOS app.
+    ...(process.env.APPLE_APP_BUNDLE_IDENTIFIER
+      ? { appBundleIdentifier: process.env.APPLE_APP_BUNDLE_IDENTIFIER }
+      : {}),
+  };
+}
+
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
@@ -66,6 +90,7 @@ export const auth = betterAuth({
     "http://localhost:3000",
     "http://localhost:20192",
   ],
+  ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, token }) => {

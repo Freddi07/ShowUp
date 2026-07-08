@@ -75,6 +75,24 @@ export async function signInWithEmail(
   return body.user;
 }
 
+/**
+ * Requests a password-reset email. better-auth intentionally returns 200 even
+ * when the account does not exist (to avoid leaking which emails are
+ * registered), so callers should always show the same confirmation. Only
+ * network failures surface as an error.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/api/auth/request-password-reset`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, redirectTo: '/reset-password' }),
+    });
+  } catch {
+    throw new SignInError('Kunne ikke koble til serveren. Sjekk nettet.');
+  }
+}
+
 export class ChangePasswordError extends Error {}
 
 /** Changes the signed-in user's password via better-auth. */

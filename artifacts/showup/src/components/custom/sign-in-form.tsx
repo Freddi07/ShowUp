@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { signIn } from '@/lib/auth-client';
+import { SocialAuthButtons } from '@/components/custom/social-auth-buttons';
 
 export function SignInForm() {
   const [email, setEmail] = useState('');
@@ -28,6 +29,7 @@ export function SignInForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+      <SocialAuthButtons callbackURL="/dashboard" />
       <Label htmlFor="sign-in-email">E-postadresse</Label>
       <Input
         id="sign-in-email"

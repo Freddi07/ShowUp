@@ -40,10 +40,11 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (isLoading) return;
-    const inLogin = segments[0] === 'login';
-    if (!user && !inLogin) {
+    const publicRoutes = new Set(['login', 'forgot-password']);
+    const inPublic = publicRoutes.has(segments[0] as string);
+    if (!user && !inPublic) {
       router.replace('/login');
-    } else if (user && inLogin) {
+    } else if (user && inPublic) {
       router.replace('/(tabs)');
     }
   }, [user, isLoading, segments, router]);
@@ -91,6 +92,7 @@ function RootLayoutNav() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="login" />
+      <Stack.Screen name="forgot-password" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="customer/[id]" options={{ presentation: 'card' }} />
       <Stack.Screen name="account" options={{ presentation: 'card' }} />

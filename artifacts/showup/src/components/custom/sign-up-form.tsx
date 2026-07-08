@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { apiFetch } from '@/lib/api-client';
 import { signUp } from '@/lib/auth-client';
+import { SocialAuthButtons } from '@/components/custom/social-auth-buttons';
 
 export function SignUpForm() {
   const [name, setName] = useState('');
@@ -44,6 +45,7 @@ export function SignUpForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3" noValidate>
+      <SocialAuthButtons callbackURL="/dashboard" />
       <Label htmlFor="sign-up-name">Navn</Label>
       <Input
         id="sign-up-name"

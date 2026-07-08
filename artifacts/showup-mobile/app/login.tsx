@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -9,6 +10,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { KeyboardAwareScrollViewCompat } from '@/components/KeyboardAwareScrollViewCompat';
 import { AppButton } from '@/components/AppButton';
 import { useColors } from '@/hooks/useColors';
@@ -18,6 +20,7 @@ import colors from '@/constants/colors';
 
 export default function LoginScreen() {
   const c = useColors();
+  const router = useRouter();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -131,6 +134,17 @@ export default function LoginScreen() {
             loading={loading}
             style={{ marginTop: 24 }}
           />
+
+          <Pressable
+            testID="forgot-password-link"
+            onPress={() => router.push('/forgot-password')}
+            style={styles.forgotRow}
+            hitSlop={8}
+          >
+            <Text style={[styles.forgotText, { color: colors.brand[600] }]}>
+              Glemt passord?
+            </Text>
+          </Pressable>
         </View>
       </KeyboardAwareScrollViewCompat>
     </View>
@@ -189,6 +203,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontFamily: 'Inter_400Regular',
     fontSize: 16,
+  },
+  forgotRow: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  forgotText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 14,
   },
   errorRow: {
     flexDirection: 'row',
