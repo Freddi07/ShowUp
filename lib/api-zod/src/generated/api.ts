@@ -48,6 +48,52 @@ export const ListAppointmentsResponse = zod.object({
 
 
 /**
+ * @summary Update an appointment's status or timing
+ */
+export const UpdateAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateAppointmentBody = zod.object({
+  "status": zod.enum(['PENDING', 'REMINDED', 'CONFIRMED', 'CANCELLED', 'RESCHEDULE_REQUESTED']).optional(),
+  "scheduledAt": zod.coerce.date().optional(),
+  "reminderAt": zod.coerce.date().optional()
+})
+
+export const UpdateAppointmentResponse = zod.object({
+  "id": zod.string(),
+  "scheduledAt": zod.coerce.date(),
+  "reminderAt": zod.coerce.date(),
+  "status": zod.enum(['PENDING', 'REMINDED', 'CONFIRMED', 'CANCELLED', 'RESCHEDULE_REQUESTED']),
+  "clientName": zod.string(),
+  "clientPhone": zod.string(),
+  "twilioSid": zod.string().nullable()
+})
+
+
+/**
+ * @summary Send an SMS reminder for an appointment now
+ */
+export const RemindAppointmentParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const RemindAppointmentBody = zod.object({
+  "message": zod.string().optional()
+})
+
+export const RemindAppointmentResponse = zod.object({
+  "id": zod.string(),
+  "scheduledAt": zod.coerce.date(),
+  "reminderAt": zod.coerce.date(),
+  "status": zod.enum(['PENDING', 'REMINDED', 'CONFIRMED', 'CANCELLED', 'RESCHEDULE_REQUESTED']),
+  "clientName": zod.string(),
+  "clientPhone": zod.string(),
+  "twilioSid": zod.string().nullable()
+})
+
+
+/**
  * @summary Customer detail with appointment history
  */
 export const GetCustomerParams = zod.object({

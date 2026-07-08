@@ -6,3 +6,4 @@
 - [Expo ↔ better-auth cross-origin](mobile-bearer-auth.md) — mobile uses bearer tokens; Expo domain MUST be in better-auth trustedOrigins or sign-in 403s
 - [ShowUp SMS via Vonage](showup-sms-vonage.md) — SMS is Vonage (not Twilio), no Replit integration; inbound GET/POST msisdn/text; signature canonicalization + prod fail-closed gotchas
 - [BookPling brand vs internal showup](showup-branding.md) — display brand is BookPling; ALL internal ids (pkg/dir/slug/component/test-login/URLs) stay "showup" — don't rename them
+- [Expo e2e testing](expo-e2e-testing.md) — tester must use absolute $REPLIT_EXPO_DEV_DOMAIN URL not /mobile/ (proxy 502); test login needs seed run (build-seed.mjs)

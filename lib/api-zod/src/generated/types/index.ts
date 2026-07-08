@@ -7,15 +7,18 @@
  */
 
 export * from './appointment';
+export * from './appointmentActionResult';
 export * from './appointmentList';
 export * from './appointmentStatus';
 export * from './appointmentSummary';
+export * from './appointmentUpdate';
 export * from './customerDetail';
 export * from './errorResponse';
 export * from './healthStatus';
 export * from './me';
 export * from './notificationSettings';
 export * from './notificationSettingsUpdate';
+export * from './remindRequest';
 export * from './statsPeriod';
 export * from './statsResponse';
 export * from './statsRow';

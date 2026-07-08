@@ -20,13 +20,16 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AppointmentActionResult,
   AppointmentList,
+  AppointmentUpdate,
   CustomerDetail,
   ErrorResponse,
   HealthStatus,
   Me,
   NotificationSettings,
   NotificationSettingsUpdate,
+  RemindRequest,
   StatsResponse,
   UnauthorizedResponse
 } from './api.schemas';
@@ -289,6 +292,148 @@ export function useListAppointments<TData = Awaited<ReturnType<typeof listAppoin
 
 
 
+
+export const getUpdateAppointmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/appointments/${id}`
+}
+
+/**
+ * @summary Update an appointment's status or timing
+ */
+export const updateAppointment = async (id: string,
+    appointmentUpdate: AppointmentUpdate, options?: RequestInit): Promise<AppointmentActionResult> => {
+
+  return customFetch<AppointmentActionResult>(getUpdateAppointmentUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appointmentUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateAppointmentMutationOptions = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAppointment>>, TError,{id: string;data: BodyType<AppointmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateAppointment>>, TError,{id: string;data: BodyType<AppointmentUpdate>}, TContext> => {
+
+const mutationKey = ['updateAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateAppointment>>, {id: string;data: BodyType<AppointmentUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateAppointment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof updateAppointment>>>
+    export type UpdateAppointmentMutationBody = BodyType<AppointmentUpdate>
+    export type UpdateAppointmentMutationError = ErrorType<ErrorResponse | UnauthorizedResponse>
+
+    /**
+ * @summary Update an appointment's status or timing
+ */
+export const useUpdateAppointment = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateAppointment>>, TError,{id: string;data: BodyType<AppointmentUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateAppointment>>,
+        TError,
+        {id: string;data: BodyType<AppointmentUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateAppointmentMutationOptions(options));
+    }
+
+export const getRemindAppointmentUrl = (id: string,) => {
+
+
+
+
+  return `/api/appointments/${id}/remind`
+}
+
+/**
+ * @summary Send an SMS reminder for an appointment now
+ */
+export const remindAppointment = async (id: string,
+    remindRequest?: RemindRequest, options?: RequestInit): Promise<AppointmentActionResult> => {
+
+  return customFetch<AppointmentActionResult>(getRemindAppointmentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(remindRequest)
+  }
+);}
+
+
+
+
+export const getRemindAppointmentMutationOptions = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof remindAppointment>>, TError,{id: string;data?: BodyType<RemindRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof remindAppointment>>, TError,{id: string;data?: BodyType<RemindRequest>}, TContext> => {
+
+const mutationKey = ['remindAppointment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof remindAppointment>>, {id: string;data?: BodyType<RemindRequest>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  remindAppointment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RemindAppointmentMutationResult = NonNullable<Awaited<ReturnType<typeof remindAppointment>>>
+    export type RemindAppointmentMutationBody = BodyType<RemindRequest> | undefined
+    export type RemindAppointmentMutationError = ErrorType<ErrorResponse | UnauthorizedResponse>
+
+    /**
+ * @summary Send an SMS reminder for an appointment now
+ */
+export const useRemindAppointment = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof remindAppointment>>, TError,{id: string;data?: BodyType<RemindRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof remindAppointment>>,
+        TError,
+        {id: string;data?: BodyType<RemindRequest>},
+        TContext
+      > => {
+      return useMutation(getRemindAppointmentMutationOptions(options));
+    }
 
 export const getGetCustomerUrl = (id: string,) => {
 

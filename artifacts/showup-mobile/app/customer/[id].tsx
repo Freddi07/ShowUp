@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,6 +14,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { useGetCustomer } from '@workspace/api-client-react';
 import { GradientHeader } from '@/components/GradientHeader';
 import { StatusBadge } from '@/components/StatusBadge';
+import {
+  AppointmentActionsSheet,
+  type ActionableAppointment,
+} from '@/components/AppointmentActionsSheet';
 import { useColors } from '@/hooks/useColors';
 import { formatShortDate, formatTime } from '@/lib/format';
 
@@ -21,6 +26,8 @@ export default function CustomerDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, isLoading, isError } = useGetCustomer(String(id));
+  const [actionTarget, setActionTarget] =
+    useState<ActionableAppointment | null>(null);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
@@ -85,14 +92,24 @@ export default function CustomerDetailScreen() {
             </Text>
           ) : (
             data.appointments.map((a) => (
-              <View
+              <Pressable
                 key={a.id}
-                style={[
+                onPress={() =>
+                  setActionTarget({
+                    id: a.id,
+                    clientName: a.clientName,
+                    clientPhone: data.phone,
+                    scheduledAt: a.scheduledAt,
+                    status: a.status,
+                  })
+                }
+                style={({ pressed }) => [
                   styles.apptRow,
                   {
                     backgroundColor: c.card,
                     borderColor: c.border,
                     borderRadius: c.radius,
+                    opacity: pressed ? 0.85 : 1,
                   },
                 ]}
               >
@@ -107,11 +124,23 @@ export default function CustomerDetailScreen() {
                   </Text>
                 </View>
                 <StatusBadge status={a.status} size="sm" />
-              </View>
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={18}
+                  color={c.mutedForeground}
+                  style={{ marginLeft: 10 }}
+                />
+              </Pressable>
             ))
           )}
         </ScrollView>
       )}
+
+      <AppointmentActionsSheet
+        appointment={actionTarget}
+        visible={actionTarget !== null}
+        onClose={() => setActionTarget(null)}
+      />
     </View>
   );
 }

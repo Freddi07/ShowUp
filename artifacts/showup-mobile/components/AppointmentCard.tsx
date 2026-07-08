@@ -11,12 +11,14 @@ export function AppointmentCard({
   status,
   clientPhone,
   onPress,
+  onActions,
 }: {
   clientName: string;
   scheduledAt: string;
   status: string;
   clientPhone?: string | null;
   onPress?: () => void;
+  onActions?: () => void;
 }) {
   const c = useColors();
   const time = formatTime(new Date(scheduledAt));
@@ -55,7 +57,22 @@ export function AppointmentCard({
           <StatusBadge status={status} />
         </View>
       </View>
-      {onPress ? (
+      {onActions ? (
+        <Pressable
+          onPress={onActions}
+          hitSlop={10}
+          style={({ pressed }) => [
+            styles.actionBtn,
+            {
+              backgroundColor: c.secondary,
+              borderRadius: c.radius,
+              opacity: pressed ? 0.7 : 1,
+            },
+          ]}
+        >
+          <Ionicons name="ellipsis-horizontal" size={20} color={c.foreground} />
+        </Pressable>
+      ) : onPress ? (
         <Ionicons
           name="chevron-forward"
           size={18}
@@ -107,5 +124,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter_400Regular',
     fontSize: 13,
     marginTop: 2,
+  },
+  actionBtn: {
+    width: 40,
+    height: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

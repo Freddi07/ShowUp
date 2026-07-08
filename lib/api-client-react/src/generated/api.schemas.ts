@@ -48,6 +48,26 @@ export interface AppointmentList {
   items: Appointment[];
 }
 
+export interface AppointmentActionResult {
+  id: string;
+  scheduledAt: string;
+  reminderAt: string;
+  status: AppointmentStatus;
+  clientName: string;
+  clientPhone: string;
+  twilioSid: string | null;
+}
+
+export interface AppointmentUpdate {
+  status?: AppointmentStatus;
+  scheduledAt?: string;
+  reminderAt?: string;
+}
+
+export interface RemindRequest {
+  message?: string;
+}
+
 export interface AppointmentSummary {
   id: string;
   scheduledAt: string;

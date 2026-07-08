@@ -62,6 +62,88 @@ paths:
                 $ref: "#/components/schemas/AppointmentList"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /appointments/{id}:
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update an appointment's status or timing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentUpdate"
+      responses:
+        "200":
+          description: Updated appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentActionResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /appointments/{id}/remind:
+    post:
+      operationId: remindAppointment
+      tags: [appointments]
+      summary: Send an SMS reminder for an appointment now
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RemindRequest"
+      responses:
+        "200":
+          description: Reminder sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentActionResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: SMS delivery failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /customers/{id}:
     get:
       operationId: getCustomer
@@ -230,6 +312,50 @@ components:
             $ref: "#/components/schemas/Appointment"
       required:
         - items
+    AppointmentActionResult:
+      type: object
+      properties:
+        id:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        reminderAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+        clientName:
+          type: string
+        clientPhone:
+          type: string
+        twilioSid:
+          type: string
+          nullable: true
+      required:
+        - id
+        - scheduledAt
+        - reminderAt
+        - status
+        - clientName
+        - clientPhone
+        - twilioSid
+    AppointmentUpdate:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+        scheduledAt:
+          type: string
+          format: date-time
+        reminderAt:
+          type: string
+          format: date-time
+    RemindRequest:
+      type: object
+      properties:
+        message:
+          type: string
     AppointmentSummary:
       type: object
       properties:

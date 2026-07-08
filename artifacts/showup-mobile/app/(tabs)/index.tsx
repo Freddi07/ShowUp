@@ -19,6 +19,10 @@ import {
 } from '@workspace/api-client-react';
 import { GradientHeader } from '@/components/GradientHeader';
 import { AppointmentCard } from '@/components/AppointmentCard';
+import {
+  AppointmentActionsSheet,
+  type ActionableAppointment,
+} from '@/components/AppointmentActionsSheet';
 import { useColors } from '@/hooks/useColors';
 import { formatDayHeading, dayKey, startOfDay } from '@/lib/format';
 
@@ -28,6 +32,8 @@ export default function DashboardScreen() {
   const c = useColors();
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>('upcoming');
+  const [actionTarget, setActionTarget] =
+    useState<ActionableAppointment | null>(null);
 
   const appointmentsQuery = useListAppointments();
   const statsQuery = useGetStats();
@@ -151,6 +157,15 @@ export default function DashboardScreen() {
                 ? () => router.push(`/customer/${item.customerId}`)
                 : undefined
             }
+            onActions={() =>
+              setActionTarget({
+                id: item.id,
+                clientName: item.clientName,
+                clientPhone: item.clientPhone,
+                scheduledAt: item.scheduledAt,
+                status: item.status,
+              })
+            }
           />
         )}
         ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
@@ -165,6 +180,12 @@ export default function DashboardScreen() {
             <EmptyState filter={filter} />
           )
         }
+      />
+
+      <AppointmentActionsSheet
+        appointment={actionTarget}
+        visible={actionTarget !== null}
+        onClose={() => setActionTarget(null)}
       />
     </View>
   );
