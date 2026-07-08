@@ -1,12 +1,36 @@
 import { Router } from "express";
 import { and, asc, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { appointmentTable, customerTable } from "@workspace/db/schema";
+import {
+  appointmentTable,
+  customerTable,
+  userProfileTable,
+} from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
-import { serializeCustomers, upsertCustomer } from "../lib/customers";
+import {
+  CustomerLimitError,
+  countCustomers,
+  serializeCustomers,
+  upsertCustomer,
+} from "../lib/customers";
+import { resolveEntitlements } from "../lib/entitlements";
 
 const router = Router();
 router.use(requireUser);
+
+/** Load the signed-in user's effective plan entitlements. */
+async function loadEntitlements(userId: string) {
+  const [profile] = await db
+    .select({
+      plan: userProfileTable.plan,
+      subscriptionStatus: userProfileTable.subscriptionStatus,
+      trialEndsAt: userProfileTable.trialEndsAt,
+    })
+    .from(userProfileTable)
+    .where(eq(userProfileTable.userId, userId))
+    .limit(1);
+  return resolveEntitlements(profile ?? null);
+}
 
 /**
  * Resolve an imported appointment value into a canonical UTC Date.
@@ -79,7 +103,16 @@ router.get("/", async (req, res) => {
       .where(and(...conds))
       .orderBy(asc(customerTable.name));
 
-    res.json({ items: await serializeCustomers(rows) });
+    const [{ maxCustomers }, total] = await Promise.all([
+      loadEntitlements(userId),
+      countCustomers(userId),
+    ]);
+
+    res.json({
+      items: await serializeCustomers(rows),
+      total,
+      limit: maxCustomers,
+    });
   } catch (err) {
     console.error("[customers] list error:", err);
     res.status(500).json({ error: "Kunne ikke hente kunder" });
@@ -95,15 +128,27 @@ router.post("/", async (req, res) => {
       res.status(400).json({ error: "Navn er påkrevd" });
       return;
     }
-    const { customer } = await upsertCustomer(userId, {
-      name,
-      phone: req.body?.phone,
-      email: req.body?.email,
-      source: "manual",
-    });
+    const { maxCustomers } = await loadEntitlements(userId);
+    const { customer } = await upsertCustomer(
+      userId,
+      {
+        name,
+        phone: req.body?.phone,
+        email: req.body?.email,
+        source: "manual",
+      },
+      { maxCustomers },
+    );
     const [serialized] = await serializeCustomers([customer]);
     res.status(201).json(serialized);
   } catch (err) {
+    if (err instanceof CustomerLimitError) {
+      res.status(403).json({
+        error: `Du har nådd kundegrensen for planen din (${err.limit}). Oppgrader for å legge til flere.`,
+        code: "customer_limit",
+      });
+      return;
+    }
     console.error("[customers] create error:", err);
     res.status(500).json({ error: "Kunne ikke lagre kunde" });
   }
@@ -129,23 +174,42 @@ router.post("/import", async (req, res) => {
         ? req.body.source.trim()
         : "import";
 
+    const { maxCustomers } = await loadEntitlements(userId);
+
     let imported = 0;
     let updated = 0;
     let skipped = 0;
     let appointmentsCreated = 0;
+    let limitReached = false;
     for (const item of list.slice(0, 5000)) {
       const name = typeof item?.name === "string" ? item.name.trim() : "";
       if (!name) {
         skipped++;
         continue;
       }
-      const result = await upsertCustomer(userId, {
-        name,
-        phone: item?.phone,
-        email: item?.email,
-        externalId: item?.externalId,
-        source,
-      });
+      let result;
+      try {
+        result = await upsertCustomer(
+          userId,
+          {
+            name,
+            phone: item?.phone,
+            email: item?.email,
+            externalId: item?.externalId,
+            source,
+          },
+          { maxCustomers },
+        );
+      } catch (err) {
+        if (err instanceof CustomerLimitError) {
+          // Cap reached: skip remaining new customers but keep applying updates
+          // to existing ones (those never throw).
+          limitReached = true;
+          skipped++;
+          continue;
+        }
+        throw err;
+      }
       if (result.created) imported++;
       else updated++;
 
@@ -178,7 +242,7 @@ router.post("/import", async (req, res) => {
         }
       }
     }
-    res.json({ imported, updated, skipped, appointmentsCreated });
+    res.json({ imported, updated, skipped, appointmentsCreated, limitReached });
   } catch (err) {
     console.error("[customers] import error:", err);
     res.status(500).json({ error: "Import feilet" });

@@ -2,3 +2,4 @@
 - [ShowUp Stripe billing](showup-stripe.md) — connector uses settings.secret; externalize stripe-replit-sync (bundling drops .sql); bind checkout via client_reference_id; 3 plan links via seed-stripe → VITE_CHECKOUT_URL_*
 - [ShowUp auth & admin](showup-auth-admin.md) — reset endpoint is /api/auth/request-password-reset; admin = email allowlist (ADMIN_EMAILS/VITE_ADMIN_EMAIL); user delete must clear tenant tables manually
 - [ShowUp customers & ingest](showup-customers-ingest.md) — customers via manual/CSV/public API-key endpoint; upsert dedup externalId→phone→email; no real OAuth integrations; drizzle push is interactive (use SQL for additive DDL)
+- [ShowUp plan entitlements](showup-entitlements.md) — customer-cap is the only enforceable plan tier (100/500/∞); effective plan resolution + atomic cap via advisory lock; stats not gated (no backend route)

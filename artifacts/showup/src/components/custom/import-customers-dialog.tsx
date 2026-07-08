@@ -148,6 +148,9 @@ export function ImportCustomersDialog({ open, onClose, onImported }: ImportDialo
               {result.appointmentsCreated > 0
                 ? ` ${result.appointmentsCreated} avtaler registrert.`
                 : ''}
+              {result.limitReached
+                ? ' Kundegrensen for planen din ble nådd – ikke alle nye kunder ble lagt til. Oppgrader for å importere flere.'
+                : ''}
             </div>
           )}
           <div className="flex justify-end gap-2 pt-1">

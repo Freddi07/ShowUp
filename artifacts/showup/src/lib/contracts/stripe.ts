@@ -6,6 +6,7 @@ export const TrialStatusSchema = z.object({
   paymentMethodCollected: z.boolean(),
   subscriptionStatus: z.string().nullable().optional(),
   plan: z.string().nullable().optional(),
+  maxCustomers: z.number().nullable().optional(),
 });
 
 export const BillingVerifyResponseSchema = z.object({

@@ -158,6 +158,8 @@ export function KunderPage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [version, setVersion] = useState(0);
+  const [total, setTotal] = useState<number | null>(null);
+  const [limit, setLimit] = useState<number | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -177,9 +179,15 @@ export function KunderPage() {
     if (version > 0) params.set('_v', String(version));
     const qs = params.toString();
     apiFetch(`/api/customers${qs ? `?${qs}` : ''}`, { schema: CustomerListSchema })
-      .then((data: CustomerList) => setCustomers(data.items))
+      .then((data: CustomerList) => {
+        setCustomers(data.items);
+        setTotal(data.total ?? data.items.length);
+        setLimit(data.limit ?? null);
+      })
       .catch(() => setError('Kunne ikke laste kunder. Prøv å laste siden på nytt.'));
   }, [debouncedSearch, sourceFilter, version]);
+
+  const atLimit = limit !== null && total !== null && total >= limit;
 
   return (
     <div className="space-y-6">
@@ -187,18 +195,44 @@ export function KunderPage() {
         <div>
           <h1 className="text-h2 text-foreground">Kunder</h1>
           <p className="text-muted-foreground text-small mt-1">
-            Alle kunder synkronisert fra tilkoblede integrasjoner
+            {total !== null
+              ? limit !== null
+                ? `${total} av ${limit} kunder brukt`
+                : `${total} kunder · ubegrenset`
+              : 'Alle kunder synkronisert fra tilkoblede integrasjoner'}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" onClick={() => setShowImport(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setShowImport(true)}
+            disabled={atLimit}
+          >
             Importer
           </Button>
-          <Button type="button" onClick={() => setShowAdd(true)}>
+          <Button type="button" onClick={() => setShowAdd(true)} disabled={atLimit}>
             Legg til kunde
           </Button>
         </div>
       </div>
+
+      {atLimit && (
+        <div className="flex flex-col gap-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-amber-800 dark:text-amber-300">
+            Du har nådd kundegrensen på {limit} for planen din. Oppgrader for å legge til
+            flere kunder.
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            className="shrink-0"
+            onClick={() => router.push('/upgrade')}
+          >
+            Oppgrader plan
+          </Button>
+        </div>
+      )}
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input

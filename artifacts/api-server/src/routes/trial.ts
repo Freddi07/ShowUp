@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { userProfileTable } from "@workspace/db/schema";
 import { auth } from "../lib/auth";
+import { resolveEntitlements } from "../lib/entitlements";
 
 const router = Router();
 
@@ -37,11 +38,13 @@ router.get("/status", async (req, res) => {
         paymentMethodCollected: false,
         subscriptionStatus: null,
         plan: null,
+        maxCustomers: resolveEntitlements(null).maxCustomers,
       });
     }
 
     const now = new Date();
     const trialActive = profile.trialEndsAt > now;
+    const { maxCustomers } = resolveEntitlements(profile, now);
 
     return res.json({
       trialActive,
@@ -49,6 +52,7 @@ router.get("/status", async (req, res) => {
       paymentMethodCollected: profile.paymentMethodCollected,
       subscriptionStatus: profile.subscriptionStatus ?? null,
       plan: profile.plan ?? null,
+      maxCustomers,
     });
   } catch (err) {
     console.error("[trial] status error:", err);

@@ -30,6 +30,25 @@ function clean(value: unknown): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+/** Thrown by upsertCustomer when creating a new customer would exceed the plan limit. */
+export class CustomerLimitError extends Error {
+  readonly limit: number;
+  constructor(limit: number) {
+    super(`Customer limit reached (${limit})`);
+    this.name = "CustomerLimitError";
+    this.limit = limit;
+  }
+}
+
+/** Count all customers belonging to a user (ignores any filters). */
+export async function countCustomers(userId: string): Promise<number> {
+  const [row] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(customerTable)
+    .where(eq(customerTable.userId, userId));
+  return row?.n ?? 0;
+}
+
 /**
  * Insert or update a customer for a user, de-duplicating by externalId, then
  * phone, then email. Used by manual add, CSV import, and the public API ingest.
@@ -37,6 +56,7 @@ function clean(value: unknown): string | null {
 export async function upsertCustomer(
   userId: string,
   input: CustomerInput,
+  opts?: { maxCustomers?: number | null },
 ): Promise<{ customer: CustomerRow; created: boolean }> {
   const name = clean(input.name) ?? "";
   const phone = clean(input.phone);
@@ -92,9 +112,34 @@ export async function upsertCustomer(
     return { customer: updated, created: false };
   }
 
+  // New customer. Updates above are always allowed; only genuinely new rows
+  // count against the plan cap. Enforce the cap atomically: a per-user advisory
+  // lock inside a transaction serializes concurrent inserts (manual/import/
+  // ingest) for the same user, so the count-then-insert check can't be raced
+  // past the limit.
+  const insertValues = { userId, name, phone, email, source, externalId };
+  if (opts?.maxCustomers != null) {
+    const limit = opts.maxCustomers;
+    return db.transaction(async (tx) => {
+      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`);
+      const [row] = await tx
+        .select({ n: sql<number>`count(*)::int` })
+        .from(customerTable)
+        .where(eq(customerTable.userId, userId));
+      if ((row?.n ?? 0) >= limit) {
+        throw new CustomerLimitError(limit);
+      }
+      const [created] = await tx
+        .insert(customerTable)
+        .values(insertValues)
+        .returning();
+      return { customer: created, created: true };
+    });
+  }
+
   const [created] = await db
     .insert(customerTable)
-    .values({ userId, name, phone, email, source, externalId })
+    .values(insertValues)
     .returning();
   return { customer: created, created: true };
 }

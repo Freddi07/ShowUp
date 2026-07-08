@@ -22,6 +22,9 @@ export type CustomerItem = z.infer<typeof CustomerItem>;
 
 export const CustomerList = z.object({
   items: z.array(CustomerItem),
+  // Total customers for the user (unfiltered) + plan limit (null = unlimited).
+  total: z.number().optional(),
+  limit: z.number().nullable().optional(),
 });
 export type CustomerList = z.infer<typeof CustomerList>;
 

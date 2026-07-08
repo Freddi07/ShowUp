@@ -4,7 +4,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { userProfileTable } from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
-import { upsertCustomer } from "../lib/customers";
+import { CustomerLimitError, upsertCustomer } from "../lib/customers";
+import { resolveEntitlements } from "../lib/entitlements";
 
 const router = Router();
 
@@ -77,15 +78,27 @@ router.post("/customers", async (req, res) => {
         ? body.source.trim()
         : "api";
 
-    const { customer, created } = await upsertCustomer(profile.userId, {
-      name,
-      phone: body.phone,
-      email: body.email,
-      externalId: body.externalId ?? body.id,
-      source,
-    });
+    const { maxCustomers } = resolveEntitlements(profile);
+    const { customer, created } = await upsertCustomer(
+      profile.userId,
+      {
+        name,
+        phone: body.phone,
+        email: body.email,
+        externalId: body.externalId ?? body.id,
+        source,
+      },
+      { maxCustomers },
+    );
     res.status(created ? 201 : 200).json({ ok: true, id: customer.id, created });
   } catch (err) {
+    if (err instanceof CustomerLimitError) {
+      res.status(403).json({
+        error: `Customer limit reached for your plan (${err.limit}). Upgrade to add more.`,
+        code: "customer_limit",
+      });
+      return;
+    }
     console.error("[ingest] customers error:", err);
     res.status(500).json({ error: "Internal server error" });
   }
