@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-// The two ways customers actually get into ShowUp today.
+// The two ways customers actually get into BookPling today.
 const methods = [
   {
     icon: FileUp,
@@ -30,7 +30,7 @@ const methods = [
     icon: Plug,
     title: 'API, Zapier & Make',
     description:
-      'Koble bookingsystemet ditt til ShowUp med en personlig API-nøkkel. Nye kunder og avtaler sendes inn automatisk — ingen manuell jobb.',
+      'Koble bookingsystemet ditt til BookPling med en personlig API-nøkkel. Nye kunder og avtaler sendes inn automatisk — ingen manuell jobb.',
     cta: 'Kom i gang med API',
     href: '/signup',
   },
@@ -45,7 +45,7 @@ interface Platform {
   method: Method;
 }
 
-// Platforms ShowUp supports today, consistent with the in-app integrasjoner-guide.
+// Platforms BookPling supports today, consistent with the in-app integrasjoner-guide.
 // `zapier` = kan sende kunder automatisk via Zapier/Make. `csv` = eksporter og last opp.
 const platforms: Platform[] = [
   { name: 'Fresha', category: 'Booking', icon: CalendarDays, method: 'zapier' },
@@ -85,7 +85,7 @@ export default function IntegrasjonerPage() {
               Fungerer med verktøyene du <span className="text-primary">allerede bruker</span>
             </h1>
             <p className="mt-6 text-body-lg text-muted-foreground">
-              Få kundene dine inn i ShowUp uten å bytte system. Last opp en fil, eller koble til
+              Få kundene dine inn i BookPling uten å bytte system. Last opp en fil, eller koble til
               bookingsystemet ditt automatisk via API, Zapier eller Make.
             </p>
           </div>
@@ -135,7 +135,7 @@ export default function IntegrasjonerPage() {
             <h2 className="font-display text-h2 tracking-tight">Koble til der kundene dine bor</h2>
             <p className="mt-4 text-body-lg text-muted-foreground">
               Booking, CRM, regnskap eller regneark — kundene dine er allerede et sted. Hent dem
-              inn i ShowUp og la påminnelsene gå av seg selv.
+              inn i BookPling og la påminnelsene gå av seg selv.
             </p>
           </div>
           <div className="mt-14 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -173,7 +173,7 @@ export default function IntegrasjonerPage() {
             <CardHeader className="pb-4">
               <CardTitle className="text-base">Har du en plattform som ikke er nevnt?</CardTitle>
               <CardDescription className="text-sm leading-relaxed">
-                De fleste bookings-, CRM- og regnskapssystemer kan sende nye kunder til ShowUp via
+                De fleste bookings-, CRM- og regnskapssystemer kan sende nye kunder til BookPling via
                 Zapier eller Make med API-nøkkelen din. Har du et system uten slik støtte,
                 eksporterer du bare en CSV-fil og laster den opp. Ta kontakt hvis du ønsker hjelp
                 med et spesifikt oppsett.
@@ -195,14 +195,14 @@ export default function IntegrasjonerPage() {
               <h2 className="font-display text-h1 tracking-tight">Klar til å koble til?</h2>
               <p className="mx-auto mt-4 max-w-xl text-body-lg text-muted-foreground">
                 Kom i gang på minutter. Importer kundene dine eller koble til bookingsystemet — og
-                la ShowUp håndtere påminnelsene.
+                la BookPling håndtere påminnelsene.
               </p>
               <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Button size="lg" asChild>
                   <a href="/signup">Kom i gang gratis</a>
                 </Button>
                 <Button variant="outline" size="lg" asChild>
-                  <Link href="/#features">Les mer om ShowUp</Link>
+                  <Link href="/#features">Les mer om BookPling</Link>
                 </Button>
               </div>
             </div>

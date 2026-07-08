@@ -59,7 +59,7 @@ export default function LoginScreen() {
           <Ionicons name="calendar-clear" size={40} color="#fff" />
         </LinearGradient>
 
-        <Text style={[styles.brand, { color: c.foreground }]}>ShowUp</Text>
+        <Text style={[styles.brand, { color: c.foreground }]}>BookPling</Text>
         <Text style={[styles.tagline, { color: c.mutedForeground }]}>
           Færre bomturer. Flere fornøyde kunder.
         </Text>

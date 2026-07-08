@@ -1,7 +1,7 @@
 // @polsia:user-owned — brand identity. Edit freely. `site.ts` re-exports
 // siteName/siteDescription; `manifest.ts` + `opengraph-image.tsx` read `brandVisual`.
 
-export const siteName = 'ShowUp';
+export const siteName = 'BookPling';
 export const siteDescription =
   'Slutt å miste kunder på grunn av glemte avtaler. Automatiserte påminnelser for lokale servicebedrifter.';
 

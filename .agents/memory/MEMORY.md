@@ -5,3 +5,4 @@
 - [ShowUp plan entitlements](showup-entitlements.md) — customer-cap is the only enforceable plan tier (100/500/∞); effective plan resolution + atomic cap via advisory lock; stats not gated (no backend route)
 - [Expo ↔ better-auth cross-origin](mobile-bearer-auth.md) — mobile uses bearer tokens; Expo domain MUST be in better-auth trustedOrigins or sign-in 403s
 - [ShowUp SMS via Vonage](showup-sms-vonage.md) — SMS is Vonage (not Twilio), no Replit integration; inbound GET/POST msisdn/text; signature canonicalization + prod fail-closed gotchas
+- [BookPling brand vs internal showup](showup-branding.md) — display brand is BookPling; ALL internal ids (pkg/dir/slug/component/test-login/URLs) stay "showup" — don't rename them

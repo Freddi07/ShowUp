@@ -1,5 +1,5 @@
 /**
- * ShowUp design tokens — warm amber brand palette.
+ * BookPling design tokens — warm amber brand palette.
  * Derived from the web app's OKLCH palette (--brand-h: 38) converted to hex,
  * so web and mobile share one visual identity.
  */

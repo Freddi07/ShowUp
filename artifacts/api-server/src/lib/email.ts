@@ -1,4 +1,4 @@
-// Transactional email for ShowUp — sends via the Resend Replit connector.
+// Transactional email for BookPling — sends via the Resend Replit connector.
 // The connector handles the API key/auth; we only POST to Resend's /emails endpoint.
 import { ReplitConnectors } from "@replit/connectors-sdk";
 import { logger } from "./logger";
@@ -6,7 +6,7 @@ import { logger } from "./logger";
 const connectors = new ReplitConnectors();
 
 /** Verified sender. Override with EMAIL_FROM once a domain is verified in Resend. */
-const FROM = process.env.EMAIL_FROM ?? "ShowUp <onboarding@resend.dev>";
+const FROM = process.env.EMAIL_FROM ?? "BookPling <onboarding@resend.dev>";
 
 export interface SendEmailInput {
   to: string;
@@ -152,13 +152,13 @@ export function welcomeEmail(input: { name: string; dashboardUrl?: string }): Em
   const { html, text } = renderEmail({
     heading: `Velkommen, ${input.name}!`,
     body: [
-      "Takk for at du registrerte deg hos ShowUp.",
+      "Takk for at du registrerte deg hos BookPling.",
       "Prøveperioden din på 14 dager er nå aktiv — du kan komme i gang med en gang.",
     ],
     cta: input.dashboardUrl
       ? { label: "Gå til dashboard", url: input.dashboardUrl }
       : undefined,
-    footer: "Du mottar denne e-posten fordi du opprettet en konto hos ShowUp.",
+    footer: "Du mottar denne e-posten fordi du opprettet en konto hos BookPling.",
   });
-  return { subject: "Velkommen til ShowUp", html, text };
+  return { subject: "Velkommen til BookPling", html, text };
 }

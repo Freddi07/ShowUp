@@ -2,7 +2,7 @@ import type Stripe from "stripe";
 import { getUncachableStripeClient } from "./stripeClient";
 
 /**
- * Seeds the ShowUp subscription plans (Starter / Pro / Business) in Stripe:
+ * Seeds the BookPling subscription plans (Starter / Pro / Business) in Stripe:
  * one product + monthly price + Payment Link (billed immediately, NO Stripe
  * trial) each. The 14-day free trial is owned entirely by the app (set from the
  * user's creation date in auth.ts), so Stripe must not add its own trial on top.
@@ -28,19 +28,19 @@ const CURRENCY = (process.env.SHOWUP_PRICE_CURRENCY ?? "nok").toLowerCase();
 const PLANS: PlanSeed[] = [
   {
     envKey: "VITE_CHECKOUT_URL_STARTER",
-    name: "ShowUp Starter",
+    name: "BookPling Starter",
     amount: 19900,
     description: "For enkeltpersoner og små bedrifter — opptil 100 kunder.",
   },
   {
     envKey: "VITE_CHECKOUT_URL_PRO",
-    name: "ShowUp Pro",
+    name: "BookPling Pro",
     amount: 49900,
     description: "For voksende bedrifter — opptil 500 kunder, alle kanaler.",
   },
   {
     envKey: "VITE_CHECKOUT_URL_BUSINESS",
-    name: "ShowUp Business",
+    name: "BookPling Business",
     amount: 99900,
     description: "For store virksomheter — ubegrenset antall kunder.",
   },

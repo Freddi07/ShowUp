@@ -16,7 +16,7 @@ export class ClinikoProvider implements IntegrationProvider {
     return {
       Authorization: this.authHeader,
       Accept: 'application/json',
-      'User-Agent': 'ShowUp/1.0',
+      'User-Agent': 'BookPling/1.0',
     };
   }
 

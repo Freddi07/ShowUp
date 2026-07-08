@@ -54,7 +54,7 @@ const features = [
   {
     title: 'Smart planlegging',
     description:
-      'Sett det opp én gang. ShowUp lærer seg din åpningstid og sender påminnelser på perfekt tidspunkt.',
+      'Sett det opp én gang. BookPling lærer seg din åpningstid og sender påminnelser på perfekt tidspunkt.',
     icon: (
       <svg
         aria-hidden="true"
@@ -147,13 +147,13 @@ const steps = [
     number: '02',
     title: 'Legg til kundene dine',
     description:
-      'Importer kundelisten på minutter. ShowUp fanger opp telefonnumre og e-postadresser automatisk.',
+      'Importer kundelisten på minutter. BookPling fanger opp telefonnumre og e-postadresser automatisk.',
   },
   {
     number: '03',
     title: 'Automatisér og slapp av',
     description:
-      'ShowUp sender påminnelser via SMS, e-post og tale automatisk. Kundene bekrefter eller endrer avtale med et enkelt svar.',
+      'BookPling sender påminnelser via SMS, e-post og tale automatisk. Kundene bekrefter eller endrer avtale med et enkelt svar.',
   },
 ];
 
@@ -177,7 +177,7 @@ export default function SetupPlaceholder() {
                 <span className="text-primary">glemte avtaler</span>
               </h1>
               <p className="mt-6 text-body-lg text-muted-foreground">
-                ShowUp sender automatiserte SMS, e-post og tale-påminnelser slik at kundene dine
+                BookPling sender automatiserte SMS, e-post og tale-påminnelser slik at kundene dine
                 aldri glemmer en avtale. Reduser uteblivelser med opptil 38% uten innsats etter
                 oppsett.
               </p>
@@ -264,7 +264,7 @@ export default function SetupPlaceholder() {
       <section id="features" className="section">
         <div className="container-page">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-eyebrow mb-3">Hvorfor ShowUp</p>
+            <p className="text-eyebrow mb-3">Hvorfor BookPling</p>
             <h2 className="font-display text-h2 tracking-tight">
               Alt du trenger for å holde kalenderen full
             </h2>
@@ -350,7 +350,7 @@ export default function SetupPlaceholder() {
               </h2>
               <p className="mt-4 text-body-lg text-muted-foreground">
                 Store planleggingsverktøy er laget for bedrifter med dedikert IT-personale og høye
-                programvarebudsjetter. ShowUp er annerledes.
+                programvarebudsjetter. BookPling er annerledes.
               </p>
               <div className="mt-8 space-y-4">
                 <div className="flex items-start gap-4">
@@ -389,7 +389,7 @@ export default function SetupPlaceholder() {
                   <div>
                     <p className="font-medium">Ingen teknisk ekspertise nødvendig</p>
                     <p className="text-sm text-muted-foreground">
-                      Hvis du kan sette en timeplan, kan du bruke ShowUp.
+                      Hvis du kan sette en timeplan, kan du bruke BookPling.
                     </p>
                   </div>
                 </div>
@@ -443,7 +443,7 @@ export default function SetupPlaceholder() {
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
                     Ingen glemte avtaler lenger. Ingen flere siste-litenvarsler eller jakting på
-                    kunder. ShowUp håndterer oppfølgingen så du kan fokusere på å drive bedriften
+                    kunder. BookPling håndterer oppfølgingen så du kan fokusere på å drive bedriften
                     din.
                   </p>
                 </CardContent>

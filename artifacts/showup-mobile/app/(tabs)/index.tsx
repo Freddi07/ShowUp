@@ -72,7 +72,7 @@ export default function DashboardScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <StatusBar style="light" />
-      <GradientHeader title="ShowUp" subtitle="Dine avtaler" />
+      <GradientHeader title="BookPling" subtitle="Dine avtaler" />
 
       <SectionList
         sections={sections}

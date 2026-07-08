@@ -69,7 +69,7 @@ router.post("/verify", async (req, res) => {
     const planName =
       product && typeof product === "object" && "name" in product
         ? (product.name as string)
-        : "ShowUp";
+        : "BookPling";
     // Normalize the Stripe product name into a tier id we can store + display.
     const planTier = /business/i.test(planName)
       ? "business"

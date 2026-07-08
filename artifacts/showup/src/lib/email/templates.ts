@@ -97,12 +97,12 @@ export function subscriptionActivatedEmail(input: {
     body: [
       `Hei ${input.name}!`,
       `Abonnementet ditt er nå aktivert. Du har valgt planen ${planName}, som fornyes automatisk hver måned.`,
-      'Du har nå full tilgang til ShowUp og alle funksjonene som er inkludert i din plan.',
+      'Du har nå full tilgang til BookPling og alle funksjonene som er inkludert i din plan.',
     ],
     cta: { label: 'Gå til dashboard', url: input.dashboardUrl },
-    footer: 'Du mottar denne e-posten fordi du aktiverte et abonnement på ShowUp.',
+    footer: 'Du mottar denne e-posten fordi du aktiverte et abonnement på BookPling.',
   });
-  return { subject: 'Abonnement aktivert — velkommen til ShowUp', html, text };
+  return { subject: 'Abonnement aktivert — velkommen til BookPling', html, text };
 }
 
 /** Subscription canceled confirmation email — sent after customer.subscription.deleted. */
@@ -111,7 +111,7 @@ export function subscriptionCanceledEmail(input: { name: string }): EmailContent
     heading: 'Abonnementet er avsluttet',
     body: [
       `Hei ${input.name},`,
-      'Abonnementet ditt på ShowUp er nå avsluttet og tilgangen din er suspendert.',
+      'Abonnementet ditt på BookPling er nå avsluttet og tilgangen din er suspendert.',
       'Hvis dette var en feil, eller du ønsker å aktivere abonnementet igjen, ta kontakt med oss.',
     ],
     footer: 'Du mottar denne e-posten fordi abonnementet ditt ble avsluttet.',
@@ -154,7 +154,7 @@ export function trialStartedEmail(input: { name: string; trialEndsAt: string }):
       `Prøveperioden din varer til ${input.trialEndsAt}.`,
       'Etter prøveperioden fornyes abonnementet automatisk.',
     ],
-    footer: 'Du mottar denne e-posten fordi du registrerte deg på ShowUp.',
+    footer: 'Du mottar denne e-posten fordi du registrerte deg på BookPling.',
   });
-  return { subject: 'Prøveperioden din har startet — ShowUp', html, text };
+  return { subject: 'Prøveperioden din har startet — BookPling', html, text };
 }

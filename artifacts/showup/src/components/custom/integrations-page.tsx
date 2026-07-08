@@ -39,7 +39,7 @@ export function IntegrationsPage() {
       <div>
         <h1 className="text-h2 font-semibold">Integrasjoner</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Få kundene dine inn i ShowUp fra andre systemer — enten ved å laste opp en fil, eller
+          Få kundene dine inn i BookPling fra andre systemer — enten ved å laste opp en fil, eller
           ved å koble til automatisk via API/Zapier.
         </p>
       </div>
@@ -55,7 +55,7 @@ export function IntegrationsPage() {
           <CardTitle className="text-base">Har du en plattform som ikke er nevnt?</CardTitle>
           <CardDescription className="text-sm">
             De fleste bookings- og regnskapssystemer (Fresha, Timma, Calendly, Microsoft Bookings,
-            HubSpot, Salesforce, Pipedrive, Zoho m.fl.) kan sende nye kunder automatisk til ShowUp
+            HubSpot, Salesforce, Pipedrive, Zoho m.fl.) kan sende nye kunder automatisk til BookPling
             via Zapier eller Make ved hjelp av API-nøkkelen over. Har du et system uten slik støtte,
             eksporterer du bare en CSV-fil og laster den opp. Ta kontakt hvis du ønsker hjelp med et
             spesifikt oppsett.

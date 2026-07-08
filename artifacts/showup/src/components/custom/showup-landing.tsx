@@ -14,13 +14,13 @@ const faqs = [
     id: 'setup-time',
     question: 'Hvor lang tid tar oppsettet?',
     answer:
-      'De fleste bedrifter er i gang på under 10 minutter. Bare sett din timeplan, importer kundelisten, og ShowUp håndterer resten automatisk.',
+      'De fleste bedrifter er i gang på under 10 minutter. Bare sett din timeplan, importer kundelisten, og BookPling håndterer resten automatisk.',
   },
   {
     id: 'reminder-types',
     question: 'Hvilke typer påminnelser kan jeg sende?',
     answer:
-      'ShowUp sender SMS, e-post og tale-påminnelser gjennom en flerkanals tilnærming. Kunder mottar påminnelser via sin foretrukne kanal og kan bekrefte eller endre en avtale med et enkelt svar.',
+      'BookPling sender SMS, e-post og tale-påminnelser gjennom en flerkanals tilnærming. Kunder mottar påminnelser via sin foretrukne kanal og kan bekrefte eller endre en avtale med et enkelt svar.',
   },
   {
     id: 'reschedule',
@@ -30,15 +30,15 @@ const faqs = [
   },
   {
     id: 'cost',
-    question: 'Hvor mye koster ShowUp?',
+    question: 'Hvor mye koster BookPling?',
     answer:
-      'ShowUp er laget for små bedrifter, med priser som passer for lokale butikker. Fra 199 kr/mnd med planer for alle behov — ingen skjulte gebyrer, ingen bindingstid.',
+      'BookPling er laget for små bedrifter, med priser som passer for lokale butikker. Fra 199 kr/mnd med planer for alle behov — ingen skjulte gebyrer, ingen bindingstid.',
   },
   {
     id: 'technical',
-    question: 'Trenger jeg teknisk kunnskap for å bruke ShowUp?',
+    question: 'Trenger jeg teknisk kunnskap for å bruke BookPling?',
     answer:
-      'Nei, absolutt ikke. ShowUp er designet for bedrifter uten teknisk ekspertise. Hvis du kan sette en timeplan og sende en e-post, kan du bruke ShowUp.',
+      'Nei, absolutt ikke. BookPling er designet for bedrifter uten teknisk ekspertise. Hvis du kan sette en timeplan og sende en e-post, kan du bruke BookPling.',
   },
 ];
 
@@ -88,7 +88,7 @@ export function ShowUpLandingClient() {
               </Badge>
               <h2 className="font-display text-h1 tracking-tight">Klar til å fylle kalenderen?</h2>
               <p className="mx-auto mt-4 max-w-xl text-muted-foreground text-body-lg">
-                Bli med lokale servicebedrifter som allerede bruker ShowUp for å eliminere glemte
+                Bli med lokale servicebedrifter som allerede bruker BookPling for å eliminere glemte
                 avtaler og holde kundene kommer tilbake.
               </p>
               <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">

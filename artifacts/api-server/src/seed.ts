@@ -1,6 +1,6 @@
 /**
  * Seed script — populates realistic Norwegian appointment data so the
- * ShowUp web + mobile apps have something to show. Also sets a known
+ * BookPling web + mobile apps have something to show. Also sets a known
  * password for the test account for end-to-end verification.
  *
  * Run via: node ./build-seed.mjs  (bundles this file and executes it)
