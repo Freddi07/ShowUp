@@ -39,7 +39,7 @@ export function SignUpForm() {
         body: JSON.stringify({ businessType }),
       }).catch(() => {});
     }
-    window.location.assign('/signup/payment');
+    window.location.assign('/dashboard');
   }
 
   return (

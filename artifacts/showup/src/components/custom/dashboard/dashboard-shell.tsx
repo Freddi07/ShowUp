@@ -33,13 +33,12 @@ export function DashboardShell({ children }: DashboardShellProps) {
     if (!isPending && session?.user && !isAdmin) {
       apiFetch<{
         trialActive: boolean;
-        paymentMethodCollected: boolean;
         subscriptionStatus: string | null;
       }>('/api/trial/status')
-        .then(({ trialActive, paymentMethodCollected, subscriptionStatus }) => {
-          if (!paymentMethodCollected) {
-            router.replace('/signup/payment');
-          } else if (!trialActive && subscriptionStatus !== 'active') {
+        .then(({ trialActive, subscriptionStatus }) => {
+          // Free access during the 14-day trial; require payment only once it
+          // has expired and there is no active subscription.
+          if (!trialActive && subscriptionStatus !== 'active') {
             router.replace('/upgrade');
           }
         })
