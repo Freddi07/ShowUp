@@ -9,6 +9,9 @@ import appointmentsRouter from "./appointments";
 import svarRouter from "./svar";
 import smsRouter from "./sms";
 import ingestRouter from "./ingest";
+import meRouter from "./me";
+import statsRouter from "./stats";
+import notificationSettingsRouter from "./notification-settings";
 
 const router: IRouter = Router();
 
@@ -28,7 +31,7 @@ router.use("/admin", adminRouter);
 // Customers (session-authed CRUD + bulk import)
 router.use("/customers", customersRouter);
 
-// Appointments (session-authed edit + manual SMS reminder)
+// Appointments (session-authed edit + manual SMS reminder + mobile list)
 router.use("/appointments", appointmentsRouter);
 
 // Replies to reminders (session-authed list + status/follow-up actions)
@@ -39,5 +42,10 @@ router.use("/sms", smsRouter);
 
 // External ingest (public API-key endpoint + key management)
 router.use("/ingest", ingestRouter);
+
+// App data shared by web + mobile (mobile-facing read endpoints)
+router.use("/me", meRouter);
+router.use("/stats", statsRouter);
+router.use("/notification-settings", notificationSettingsRouter);
 
 export default router;

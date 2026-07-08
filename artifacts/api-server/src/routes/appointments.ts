@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { appointmentTable, customerTable } from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
@@ -45,6 +45,50 @@ function parseDate(value: unknown): Date | null {
   const d = new Date(value);
   return Number.isNaN(d.getTime()) ? null : d;
 }
+
+/**
+ * GET /appointments — all appointments belonging to the signed-in business.
+ * Used by the mobile app's dashboard. Ownership is via the linked customer.
+ */
+router.get("/", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+
+    const customers = await db
+      .select({ id: customerTable.id })
+      .from(customerTable)
+      .where(eq(customerTable.userId, userId));
+    const customerIds = customers.map((c) => c.id);
+
+    if (customerIds.length === 0) {
+      return res.json({ items: [] });
+    }
+
+    const rows = await db
+      .select()
+      .from(appointmentTable)
+      .where(inArray(appointmentTable.customerId, customerIds))
+      .orderBy(asc(appointmentTable.scheduledAt));
+
+    const items = rows.map((r) => ({
+      id: r.id,
+      clientName: r.clientName,
+      clientPhone: r.clientPhone,
+      scheduledAt: r.scheduledAt.toISOString(),
+      reminderAt: r.reminderAt.toISOString(),
+      status: r.status,
+      twilioSid: r.twilioSid ?? null,
+      customerId: r.customerId ?? null,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+    }));
+
+    return res.json({ items });
+  } catch (err) {
+    console.error("[appointments] list error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 /** POST /appointments — create an appointment for one of the user's customers. */
 router.post("/", async (req, res) => {

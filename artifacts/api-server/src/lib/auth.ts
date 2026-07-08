@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { admin } from "better-auth/plugins";
+import { admin, bearer } from "better-auth/plugins";
 import { db } from "@workspace/db";
 import {
   userTable,
@@ -53,6 +53,16 @@ export const auth = betterAuth({
     ...(process.env.REPLIT_DEV_DOMAIN
       ? [`https://${process.env.REPLIT_DEV_DOMAIN}`]
       : []),
+    // The Expo mobile app (web build + native) is served from a separate
+    // Replit domain and authenticates cross-origin, so trust it explicitly.
+    ...(process.env.REPLIT_EXPO_DEV_DOMAIN
+      ? [`https://${process.env.REPLIT_EXPO_DEV_DOMAIN}`]
+      : []),
+    // Replit dev/preview and deployed domains (wildcards) so the mobile app
+    // works across sessions and in production.
+    "https://*.replit.dev",
+    "https://*.spock.replit.dev",
+    "https://*.replit.app",
     "http://localhost:3000",
     "http://localhost:20192",
   ],
@@ -73,6 +83,9 @@ export const auth = betterAuth({
       defaultRole: "user",
       adminRoles: ["admin"],
     }),
+    // Enables `Authorization: Bearer <token>` auth so the Expo mobile app
+    // can authenticate with the same session backend as the web app.
+    bearer(),
   ],
   databaseHooks: {
     user: {

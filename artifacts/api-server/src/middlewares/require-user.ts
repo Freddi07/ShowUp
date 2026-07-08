@@ -5,7 +5,7 @@ declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
-      user?: { id: string; email: string; role?: string | null };
+      user?: { id: string; name?: string; email: string; role?: string | null };
     }
   }
 }
@@ -38,6 +38,7 @@ export async function requireUser(
     }
     req.user = {
       id: session.user.id,
+      name: session.user.name,
       email: session.user.email,
       role: (session.user as { role?: string | null }).role ?? null,
     };

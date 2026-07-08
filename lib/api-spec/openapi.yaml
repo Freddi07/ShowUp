@@ -10,6 +10,16 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: appointments
+    description: Appointment operations
+  - name: customers
+    description: Customer operations
+  - name: stats
+    description: Statistics operations
+  - name: settings
+    description: Notification settings
+  - name: account
+    description: Account operations
 paths:
   /healthz:
     get:
@@ -24,7 +34,115 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me:
+    get:
+      operationId: getMe
+      tags: [account]
+      summary: Current signed-in user
+      responses:
+        "200":
+          description: The authenticated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Me"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments for the signed-in business
+      responses:
+        "200":
+          description: Appointment list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /customers/{id}:
+    get:
+      operationId: getCustomer
+      tags: [customers]
+      summary: Customer detail with appointment history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /stats:
+    get:
+      operationId: getStats
+      tags: [stats]
+      summary: Reminder & response statistics
+      responses:
+        "200":
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /notification-settings:
+    get:
+      operationId: getNotificationSettings
+      tags: [settings]
+      summary: Get notification settings
+      responses:
+        "200":
+          description: Notification settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      operationId: updateNotificationSettings
+      tags: [settings]
+      summary: Update notification settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationSettingsUpdate"
+      responses:
+        "200":
+          description: Updated notification settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 components:
+  responses:
+    Unauthorized:
+      description: Not authenticated
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +151,234 @@ components:
           type: string
       required:
         - status
-
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+    Me:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          nullable: true
+      required:
+        - id
+        - name
+        - email
+    AppointmentStatus:
+      type: string
+      enum:
+        - PENDING
+        - REMINDED
+        - CONFIRMED
+        - CANCELLED
+        - RESCHEDULE_REQUESTED
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: string
+        clientName:
+          type: string
+        clientPhone:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        reminderAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+        twilioSid:
+          type: string
+          nullable: true
+        customerId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clientName
+        - clientPhone
+        - scheduledAt
+        - reminderAt
+        - status
+        - customerId
+        - createdAt
+        - updatedAt
+    AppointmentList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+      required:
+        - items
+    AppointmentSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        reminderAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+        clientName:
+          type: string
+        twilioSid:
+          type: string
+          nullable: true
+      required:
+        - id
+        - scheduledAt
+        - reminderAt
+        - status
+        - clientName
+        - twilioSid
+    CustomerDetail:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        externalId:
+          type: string
+          nullable: true
+        appointmentCount:
+          type: integer
+        lastVisitAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/AppointmentSummary"
+      required:
+        - id
+        - name
+        - phone
+        - email
+        - source
+        - externalId
+        - appointmentCount
+        - lastVisitAt
+        - createdAt
+        - appointments
+    StatsPeriod:
+      type: object
+      properties:
+        sent:
+          type: integer
+        confirmed:
+          type: integer
+        cancelled:
+          type: integer
+        rescheduleRequested:
+          type: integer
+        noResponse:
+          type: integer
+      required:
+        - sent
+        - confirmed
+        - cancelled
+        - rescheduleRequested
+        - noResponse
+    StatsRow:
+      type: object
+      properties:
+        date:
+          type: string
+        sent:
+          type: integer
+      required:
+        - date
+        - sent
+    StatsResponse:
+      type: object
+      properties:
+        last7d:
+          $ref: "#/components/schemas/StatsPeriod"
+        last30d:
+          $ref: "#/components/schemas/StatsPeriod"
+        total:
+          $ref: "#/components/schemas/StatsPeriod"
+        dailySeries:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatsRow"
+      required:
+        - last7d
+        - last30d
+        - total
+        - dailySeries
+    NotificationSettings:
+      type: object
+      properties:
+        remind48h:
+          type: boolean
+        remind24h:
+          type: boolean
+        remind2h:
+          type: boolean
+        channelSms:
+          type: boolean
+        channelEmail:
+          type: boolean
+        autoFollowUp:
+          type: boolean
+      required:
+        - remind48h
+        - remind24h
+        - remind2h
+        - channelSms
+        - channelEmail
+        - autoFollowUp
+    NotificationSettingsUpdate:
+      type: object
+      properties:
+        remind48h:
+          type: boolean
+        remind24h:
+          type: boolean
+        remind2h:
+          type: boolean
+        channelSms:
+          type: boolean
+        channelEmail:
+          type: boolean
+        autoFollowUp:
+          type: boolean
