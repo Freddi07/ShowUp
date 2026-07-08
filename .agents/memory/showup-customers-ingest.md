@@ -20,6 +20,17 @@ Customers reach the dashboard three ways, all funneling through one upsert helpe
 - **CSV import** is parsed client-side (`showup/src/lib/csv.ts`: auto-detects comma/semicolon/tab,
   maps EN+NO column names, positional fallback) then POSTed to `/api/customers/import`.
 
+## Replit managed connectors are single-account, not per-end-user OAuth
+Managed connectors exist for Google Calendar, Microsoft Outlook, Calendly, HubSpot (searchIntegrations).
+BUT a Replit connector authorizes ONE account at the Repl/account level — all app users would share that single
+connection. ShowUp is multi-tenant SaaS (each professional needs THEIR OWN calendar), so the managed connector
+does NOT fit "each customer connects their own Google Calendar."
+**Why:** avoid building a single-account connector and calling it multi-user — it silently shares one calendar.
+**How to apply:** for per-end-user OAuth (real SaaS), build a custom Google OAuth app (own CLIENT_ID/SECRET,
+per-userId token storage, redirect /api/integrations/google-calendar/callback) — Google review required for the
+sensitive calendar scope before external users. The universal automatic path without per-platform OAuth is the
+per-user API key + Zapier/Make (already built; step-by-step guides live on the integrations page).
+
 ## Real per-platform OAuth integrations are NOT built
 The integrations schema/UI lists many platforms (Fiken, Tripletex, Fresha, Booksy, Visma, …) but there is
 **no working OAuth/sync** for them — those setup forms are placeholders. The universal path (CSV + API-key

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ApiIngestCard } from './api-ingest-card';
 import { ImportCustomersDialog } from './import-customers-dialog';
+import { PlatformGuides } from './platform-guides';
 
 function CsvImportCard() {
   const [open, setOpen] = useState(false);
@@ -46,6 +47,8 @@ export function IntegrationsPage() {
       <CsvImportCard />
 
       <ApiIngestCard />
+
+      <PlatformGuides />
 
       <Card className="bg-muted/30">
         <CardHeader className="pb-3">
