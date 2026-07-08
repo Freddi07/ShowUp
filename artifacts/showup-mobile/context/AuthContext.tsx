@@ -14,6 +14,7 @@ import {
   signInWithEmail,
   signOut as doSignOut,
 } from '@/lib/auth';
+import { unregisterForPushNotifications } from '@/lib/notifications';
 
 interface AuthContextValue {
   user: AuthUser | null;
@@ -62,6 +63,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   const signOut = useCallback(async () => {
+    // Drop this device's push token first, while the bearer is still valid.
+    await unregisterForPushNotifications();
     await doSignOut();
     setUser(null);
     queryClient.clear();

@@ -12,6 +12,7 @@ import ingestRouter from "./ingest";
 import meRouter from "./me";
 import statsRouter from "./stats";
 import notificationSettingsRouter from "./notification-settings";
+import pushRouter from "./push";
 
 const router: IRouter = Router();
 
@@ -47,5 +48,8 @@ router.use("/ingest", ingestRouter);
 router.use("/me", meRouter);
 router.use("/stats", statsRouter);
 router.use("/notification-settings", notificationSettingsRouter);
+
+// Device push-token registration (session-authed; used by the mobile app)
+router.use("/push", pushRouter);
 
 export default router;

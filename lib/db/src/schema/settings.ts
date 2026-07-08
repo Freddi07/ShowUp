@@ -17,6 +17,19 @@ export const notificationSettingsTable = pgTable(
   (t) => [index("NotificationSettings_userId_idx").on(t.userId)],
 );
 
+export const pushTokenTable = pgTable(
+  "PushToken",
+  {
+    id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId").notNull(),
+    token: text("token").notNull().unique(),
+    platform: text("platform"),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+  },
+  (t) => [index("PushToken_userId_idx").on(t.userId)],
+);
+
 export const passwordResetTokenTable = pgTable("password_reset_token", {
   id: text("id").primaryKey().$defaultFn(() => crypto.randomUUID()),
   token: text("token").notNull().unique(),
@@ -29,3 +42,5 @@ export const passwordResetTokenTable = pgTable("password_reset_token", {
 export type NotificationSettings = typeof notificationSettingsTable.$inferSelect;
 export type InsertNotificationSettings = typeof notificationSettingsTable.$inferInsert;
 export type PasswordResetToken = typeof passwordResetTokenTable.$inferSelect;
+export type PushToken = typeof pushTokenTable.$inferSelect;
+export type InsertPushToken = typeof pushTokenTable.$inferInsert;

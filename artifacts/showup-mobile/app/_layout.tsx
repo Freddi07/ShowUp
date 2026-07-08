@@ -13,9 +13,11 @@ import {
 } from '@expo-google-fonts/inter';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import { setAuthTokenGetter, setBaseUrl } from '@workspace/api-client-react';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { API_BASE, getToken } from '@/lib/auth';
+import { registerForPushNotifications } from '@/lib/notifications';
 
 // Point the generated API client at the shared backend and supply the bearer
 // token on every request. Configured once at module load, before any hooks run.
@@ -45,6 +47,46 @@ function RootLayoutNav() {
       router.replace('/(tabs)');
     }
   }, [user, isLoading, segments, router]);
+
+  // Register for push notifications once the user is signed in.
+  useEffect(() => {
+    if (user) {
+      registerForPushNotifications();
+    }
+  }, [user]);
+
+  // Deep-link into the relevant customer when a reply notification is tapped.
+  useEffect(() => {
+    const openFromData = (data: Record<string, unknown> | undefined) => {
+      const customerId = data?.customerId;
+      if (typeof customerId === 'string' && customerId) {
+        router.push(`/customer/${customerId}`);
+      }
+    };
+
+    // Cold start: app was launched by tapping a notification.
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      if (response) {
+        openFromData(
+          response.notification.request.content.data as
+            | Record<string, unknown>
+            | undefined,
+        );
+      }
+    });
+
+    // Warm taps while the app is running.
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        openFromData(
+          response.notification.request.content.data as
+            | Record<string, unknown>
+            | undefined,
+        );
+      },
+    );
+    return () => sub.remove();
+  }, [router]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

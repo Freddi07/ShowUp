@@ -2,8 +2,22 @@ import type { Request, Response } from "express";
 import { Router } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { appointmentTable } from "@workspace/db/schema";
+import { appointmentTable, customerTable } from "@workspace/db/schema";
 import { verifyVonageSignature } from "../lib/vonage";
+import { sendPushToUser } from "../lib/push";
+
+/** Human-readable Norwegian copy for each status a reply can produce. */
+const REPLY_COPY: Record<
+  "CONFIRMED" | "CANCELLED" | "RESCHEDULE_REQUESTED",
+  { title: string; verb: string }
+> = {
+  CONFIRMED: { title: "Time bekreftet", verb: "bekreftet timen" },
+  CANCELLED: { title: "Time avlyst", verb: "avlyste timen" },
+  RESCHEDULE_REQUESTED: {
+    title: "Ønsker ny tid",
+    verb: "ønsker å flytte timen",
+  },
+};
 
 const router = Router();
 
@@ -97,6 +111,28 @@ async function handleInbound(req: Request, res: Response) {
           console.info(
             `[sms] reply from ${from} → ${decision} (appointment ${match.id})`,
           );
+          // Notify the owning professional instantly (best-effort). Ownership
+          // runs appointment → customer → userId; skip if the appointment isn't
+          // linked to a customer we can attribute.
+          if (match.customerId) {
+            const [owner] = await db
+              .select({ userId: customerTable.userId })
+              .from(customerTable)
+              .where(eq(customerTable.id, match.customerId))
+              .limit(1);
+            if (owner?.userId) {
+              const copy = REPLY_COPY[decision];
+              await sendPushToUser(owner.userId, {
+                title: copy.title,
+                body: `${match.clientName} ${copy.verb}.`,
+                data: {
+                  appointmentId: match.id,
+                  customerId: match.customerId,
+                  status: decision,
+                },
+              });
+            }
+          }
         } else {
           console.warn(
             `[sms] reply from ${from} skipped — appointment ${match.id} no longer awaiting reply`,
