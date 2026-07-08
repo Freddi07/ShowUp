@@ -87,10 +87,24 @@ export const auth = betterAuth({
     "https://*.replit.dev",
     "https://*.spock.replit.dev",
     "https://*.replit.app",
+    // Production custom domain.
+    "https://bookpling.com",
+    "https://www.bookpling.com",
     "http://localhost:3000",
     "http://localhost:20192",
   ],
   ...(Object.keys(socialProviders).length > 0 ? { socialProviders } : {}),
+  account: {
+    // Auto-link a social sign-in to an existing account that shares the same
+    // email. Only "trusted" (email-verified) providers are linked automatically
+    // — Google verifies email ownership, so a user who signed up with
+    // email+password can later log in with Google on the same address without
+    // hitting `account_not_linked`.
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google"],
+    },
+  },
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user, token }) => {
