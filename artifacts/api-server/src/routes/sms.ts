@@ -1,8 +1,9 @@
-import crypto from "node:crypto";
+import type { Request, Response } from "express";
 import { Router } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { appointmentTable } from "@workspace/db/schema";
+import { verifyVonageSignature } from "../lib/vonage";
 
 const router = Router();
 
@@ -32,65 +33,40 @@ function classifyReply(
 }
 
 /**
- * Validate Twilio's request signature (HMAC-SHA1 over the exact webhook URL +
- * sorted POST params, keyed by the auth token). The URL must match what the
- * Twilio number is configured to call.
+ * PUBLIC: GET/POST /sms/inbound
+ * Vonage calls this when a customer replies to a reminder SMS. Vonage delivers
+ * inbound messages via GET (query params) or POST (form/JSON body) depending on
+ * dashboard config, so we merge both. We match the reply to the most recent
+ * reminded appointment for that phone number and update its status
+ * (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling).
  */
-function isValidTwilioSignature(req: {
-  header: (name: string) => string | undefined;
-  body: Record<string, unknown>;
-}): boolean {
-  const token = process.env.TWILIO_AUTH_TOKEN;
-  const signature = req.header("x-twilio-signature");
-  if (!token || !signature) return false;
-
-  const url =
-    process.env.TWILIO_WEBHOOK_URL ||
-    (process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}/api/sms/inbound`
-      : "");
-  if (!url) return false;
-
-  const params = req.body ?? {};
-  const data =
-    url +
-    Object.keys(params)
-      .sort()
-      .map((key) => key + String(params[key]))
-      .join("");
-  const expected = crypto
-    .createHmac("sha1", token)
-    .update(Buffer.from(data, "utf-8"))
-    .digest("base64");
-
+async function handleInbound(req: Request, res: Response) {
   try {
-    return crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(signature));
-  } catch {
-    return false;
-  }
-}
+    const params: Record<string, unknown> = {
+      ...(req.query as Record<string, unknown>),
+      ...((req.body as Record<string, unknown>) ?? {}),
+    };
 
-/**
- * PUBLIC: POST /sms/inbound
- * Twilio calls this when a customer replies to a reminder SMS. We match the
- * reply to the most recent reminded/pending appointment for that phone number
- * and update its status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling).
- */
-router.post("/inbound", async (req, res) => {
-  try {
-    const valid = isValidTwilioSignature(req);
-    if (!valid && process.env.NODE_ENV === "production") {
-      res.status(403).type("text/xml").send("<Response/>");
+    const hasSecret = !!process.env.VONAGE_SIGNATURE_SECRET;
+    const valid = hasSecret ? verifyVonageSignature(params) : false;
+
+    if (hasSecret && !valid && process.env.NODE_ENV === "production") {
+      res.status(403).send("Forbidden");
       return;
     }
-    if (!valid) {
+    if (!hasSecret) {
       console.warn(
-        "[sms] Twilio signature check failed — processing anyway (non-production).",
+        "[sms] VONAGE_SIGNATURE_SECRET not set — inbound webhook is unverified.",
+      );
+    } else if (!valid) {
+      console.warn(
+        "[sms] Vonage signature check failed — processing anyway (non-production).",
       );
     }
 
-    const from = digits(req.body?.From);
-    const body = typeof req.body?.Body === "string" ? req.body.Body : "";
+    // Vonage inbound payload: `msisdn` is the sender, `text` is the message.
+    const from = digits(params.msisdn);
+    const body = typeof params.text === "string" ? params.text : "";
     const decision = classifyReply(body);
 
     if (from && decision) {
@@ -134,12 +110,15 @@ router.post("/inbound", async (req, res) => {
       }
     }
 
-    // Empty TwiML: acknowledge without sending an auto-reply.
-    res.type("text/xml").send("<Response/>");
+    // Acknowledge with 200 so Vonage does not retry the delivery.
+    res.status(200).send("OK");
   } catch (err) {
     console.error("[sms] inbound error:", err);
-    res.type("text/xml").send("<Response/>");
+    res.status(200).send("OK");
   }
-});
+}
+
+router.get("/inbound", handleInbound);
+router.post("/inbound", handleInbound);
 
 export default router;
