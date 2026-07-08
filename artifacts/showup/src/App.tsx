@@ -47,6 +47,8 @@ import AdminPage from '@/app/(dashboard)/admin/page';
 import UpgradePage from '@/app/(dashboard)/upgrade/page';
 // @ts-ignore
 import ExamplePage from '@/app/(custom)/example/page';
+// @ts-ignore
+import IntegrasjonerPage from '@/app/(marketing)/integrasjoner/page';
 
 const queryClient = new QueryClient();
 
@@ -69,6 +71,7 @@ function Router() {
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/profile" component={ProfilePage} />
       <Route path="/upgrade" component={UpgradePage} />
+      <Route path="/integrasjoner" component={IntegrasjonerPage} />
       <Route path="/example" component={ExamplePage} />
 
       {/* Dashboard routes — wrapped in DashboardShell which handles auth */}

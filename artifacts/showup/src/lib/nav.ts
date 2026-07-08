@@ -30,7 +30,8 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { label: 'Funksjoner', href: '/#features', group: 'primary', order: 0 },
   { label: 'Slik fungerer det', href: '/#how-it-works', group: 'primary', order: 1 },
-  { label: 'Priser', href: '/#pricing', group: 'primary', order: 2 },
+  { label: 'Integrasjoner', href: '/integrasjoner', group: 'primary', order: 2 },
+  { label: 'Priser', href: '/#pricing', group: 'primary', order: 3 },
   {
     label: 'Kom i gang',
     href: '/signup',
