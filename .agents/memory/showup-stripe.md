@@ -38,6 +38,16 @@ deactivates any legacy link that still carries a trial and creates a replacement
 update the `VITE_CHECKOUT_URL_STARTER/PRO/BUSINESS` + `VITE_SIGNUP_CHECKOUT_URL` shared env vars and
 restart `artifacts/showup: web` (VITE vars are build-time).
 
+## Plan tier storage (starter/pro/business)
+`UserProfile.plan` (nullable text) holds the subscription tier. It is derived from the Stripe
+product NAME at `/billing/verify` (regex: business/pro/starter → id, else null), since there is no
+dedicated tier field on the Stripe side we read. `onConflictDoUpdate` only writes `plan` when the
+derive is non-null, so an unknown product never wipes an existing tier. Frontend maps id→label
+(Starter/Pro/Business) in dashboard badge + konto "Plan:" row; `trial/status` returns `plan`.
+**Why:** the app previously discarded the plan name and only showed "Aktivt abonnement".
+**How to apply:** to grant a plan manually (testing/comps), set `UserProfile.plan` +
+`subscriptionStatus='active'` directly; no Stripe subscription required for the UI to show the tier.
+
 ## Checkout ownership binding (static Payment Link model)
 The app uses a single static Stripe Payment Link (`VITE_SIGNUP_CHECKOUT_URL`, trial-free),
 then verifies server-side via `POST /api/billing/verify { sessionId }`.

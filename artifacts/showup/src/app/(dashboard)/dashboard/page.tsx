@@ -21,10 +21,17 @@ import { CustomerList } from '@/lib/contracts/customer';
 import { StatsResponse, type StatsResponse as StatsResponseType } from '@/lib/contracts/stats';
 import { type TrialStatus, TrialStatusSchema } from '@/lib/contracts/stripe';
 
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Starter',
+  pro: 'Pro',
+  business: 'Business',
+};
+
 function planLabel(status: TrialStatus | null): { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } {
   if (!status) return { label: '—', variant: 'outline' };
   const s = status.subscriptionStatus;
-  if (s === 'active') return { label: 'Aktivt abonnement', variant: 'default' };
+  const tier = status.plan ? PLAN_LABELS[status.plan] : null;
+  if (s === 'active') return { label: tier ?? 'Aktivt abonnement', variant: 'default' };
   if (s === 'canceled') return { label: 'Avsluttet', variant: 'destructive' };
   if (s === 'past_due') return { label: 'Betaling forfalt', variant: 'destructive' };
   if (status.trialActive) return { label: 'Prøveperiode', variant: 'secondary' };

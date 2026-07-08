@@ -247,6 +247,12 @@ function ProfileSection({ profile }: { profile: KontoProfileType }) {
   );
 }
 
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Starter',
+  pro: 'Pro',
+  business: 'Business',
+};
+
 function subscriptionLabel(status: string | null | undefined): string {
   if (!status) return 'Ingen aktiv plan';
   if (status === 'trialing') return 'Prøveperiode';
@@ -287,6 +293,15 @@ function SubscriptionSection() {
                 {subscriptionLabel(status?.subscriptionStatus)}
               </span>
             </div>
+
+            {status?.plan && PLAN_LABELS[status.plan] && (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted-foreground">Plan:</span>
+                <span className="text-sm font-medium text-foreground">
+                  {PLAN_LABELS[status.plan]}
+                </span>
+              </div>
+            )}
 
             {status?.trialActive && status.trialEndsAt && (
               <div className="flex items-center gap-3">

@@ -70,6 +70,14 @@ router.post("/verify", async (req, res) => {
       product && typeof product === "object" && "name" in product
         ? (product.name as string)
         : "ShowUp";
+    // Normalize the Stripe product name into a tier id we can store + display.
+    const planTier = /business/i.test(planName)
+      ? "business"
+      : /pro/i.test(planName)
+        ? "pro"
+        : /starter/i.test(planName)
+          ? "starter"
+          : null;
 
     const now = new Date();
     const fallbackTrialEnd = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000);
@@ -83,6 +91,7 @@ router.post("/verify", async (req, res) => {
         stripeCustomerId: customerId,
         paymentMethodCollected: true,
         subscriptionStatus,
+        plan: planTier,
       })
       .onConflictDoUpdate({
         target: userProfileTable.userId,
@@ -90,6 +99,7 @@ router.post("/verify", async (req, res) => {
           stripeCustomerId: customerId,
           paymentMethodCollected: true,
           subscriptionStatus,
+          ...(planTier ? { plan: planTier } : {}),
           ...(trialEnd ? { trialEndsAt: trialEnd } : {}),
           updatedAt: now,
         },

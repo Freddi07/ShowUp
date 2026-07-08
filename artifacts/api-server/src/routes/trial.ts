@@ -36,6 +36,7 @@ router.get("/status", async (req, res) => {
         trialEndsAt: null,
         paymentMethodCollected: false,
         subscriptionStatus: null,
+        plan: null,
       });
     }
 
@@ -47,6 +48,7 @@ router.get("/status", async (req, res) => {
       trialEndsAt: profile.trialEndsAt.toISOString(),
       paymentMethodCollected: profile.paymentMethodCollected,
       subscriptionStatus: profile.subscriptionStatus ?? null,
+      plan: profile.plan ?? null,
     });
   } catch (err) {
     console.error("[trial] status error:", err);

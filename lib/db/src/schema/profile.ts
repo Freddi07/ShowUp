@@ -13,6 +13,9 @@ export const userProfileTable = pgTable(
     stripePaymentMethodId: text("stripePaymentMethodId"),
     paymentMethodCollected: boolean("paymentMethodCollected").notNull().default(false),
     subscriptionStatus: text("subscriptionStatus"),
+    // Subscription tier: 'starter' | 'pro' | 'business'. Null while on trial or
+    // with no active plan. Set from the Stripe product at checkout verify.
+    plan: text("plan"),
     // Per-user ingest API key for automatically adding customers from external
     // platforms (Zapier/Make/webhooks). Null until the user generates one.
     apiKey: text("apiKey").unique(),
