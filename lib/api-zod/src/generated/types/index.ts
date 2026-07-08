@@ -6,15 +6,21 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from './adminStats';
+export * from './adminStatsAppointmentsByStatus';
 export * from './appointment';
 export * from './appointmentActionResult';
 export * from './appointmentList';
 export * from './appointmentStatus';
 export * from './appointmentSummary';
 export * from './appointmentUpdate';
+export * from './customerCreate';
 export * from './customerDetail';
+export * from './customerList';
+export * from './customerListItem';
 export * from './errorResponse';
 export * from './healthStatus';
+export * from './listCustomersParams';
 export * from './listRepliesParams';
 export * from './me';
 export * from './notificationSettings';
@@ -34,4 +40,5 @@ export * from './templateLanguage';
 export * from './templateList';
 export * from './templateType';
 export * from './templateUpsert';
+export * from './trialStatus';
 export * from './unauthorizedResponse';

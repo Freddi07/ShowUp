@@ -52,6 +52,19 @@ paths:
                 $ref: "#/components/schemas/Me"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    delete:
+      operationId: deleteAccount
+      tags: [account]
+      summary: Permanently delete the signed-in user's account
+      responses:
+        "200":
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
   /appointments:
     get:
       operationId: listAppointments
@@ -308,6 +321,96 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /customers:
+    get:
+      operationId: listCustomers
+      tags: [customers]
+      summary: List customers for the signed-in business
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Customer list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createCustomer
+      tags: [customers]
+      summary: Manually add a single customer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CustomerCreate"
+      responses:
+        "201":
+          description: Created customer
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerListItem"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Plan customer limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /trial/status:
+    get:
+      operationId: getTrialStatus
+      tags: [account]
+      summary: Current subscription / trial status
+      responses:
+        "200":
+          description: Trial and subscription status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrialStatus"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /admin/stats:
+    get:
+      operationId: getAdminStats
+      tags: [account]
+      summary: Aggregate platform metrics (admin only)
+      responses:
+        "200":
+          description: Admin statistics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminStats"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Not an administrator
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /notification-settings:
     get:
       operationId: getNotificationSettings
@@ -743,3 +846,127 @@ components:
       required:
         - language
         - body
+    CustomerListItem:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        source:
+          type: string
+          nullable: true
+        externalId:
+          type: string
+          nullable: true
+        appointmentCount:
+          type: integer
+        lastVisitAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - phone
+        - email
+        - source
+        - externalId
+        - appointmentCount
+        - lastVisitAt
+        - createdAt
+    CustomerList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerListItem"
+        total:
+          type: integer
+        limit:
+          type: integer
+          nullable: true
+      required:
+        - items
+        - total
+        - limit
+    CustomerCreate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+      required:
+        - name
+    TrialStatus:
+      type: object
+      properties:
+        trialActive:
+          type: boolean
+        trialEndsAt:
+          type: string
+          format: date-time
+          nullable: true
+        paymentMethodCollected:
+          type: boolean
+        subscriptionStatus:
+          type: string
+          nullable: true
+        plan:
+          type: string
+          nullable: true
+        maxCustomers:
+          type: integer
+          nullable: true
+      required:
+        - trialActive
+        - trialEndsAt
+        - paymentMethodCollected
+        - subscriptionStatus
+        - plan
+        - maxCustomers
+    AdminStats:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+        bannedUsers:
+          type: integer
+        newUsers7d:
+          type: integer
+        activeSubscriptions:
+          type: integer
+        trialingUsers:
+          type: integer
+        totalCustomers:
+          type: integer
+        totalAppointments:
+          type: integer
+        appointmentsByStatus:
+          type: object
+          additionalProperties:
+            type: integer
+      required:
+        - totalUsers
+        - bannedUsers
+        - newUsers7d
+        - activeSubscriptions
+        - trialingUsers
+        - totalCustomers
+        - totalAppointments
+        - appointmentsByStatus

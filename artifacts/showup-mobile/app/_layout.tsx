@@ -40,10 +40,10 @@ function RootLayoutNav() {
 
   useEffect(() => {
     if (isLoading) return;
-    const inApp = segments[0] === '(tabs)' || segments[0] === 'customer';
-    if (!user && inApp) {
+    const inLogin = segments[0] === 'login';
+    if (!user && !inLogin) {
       router.replace('/login');
-    } else if (user && segments[0] === 'login') {
+    } else if (user && inLogin) {
       router.replace('/(tabs)');
     }
   }, [user, isLoading, segments, router]);
@@ -93,6 +93,12 @@ function RootLayoutNav() {
       <Stack.Screen name="login" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="customer/[id]" options={{ presentation: 'card' }} />
+      <Stack.Screen name="account" options={{ presentation: 'card' }} />
+      <Stack.Screen name="statistics" options={{ presentation: 'card' }} />
+      <Stack.Screen name="templates" options={{ presentation: 'card' }} />
+      <Stack.Screen name="integrations" options={{ presentation: 'card' }} />
+      <Stack.Screen name="subscription" options={{ presentation: 'card' }} />
+      <Stack.Screen name="admin" options={{ presentation: 'card' }} />
     </Stack>
   );
 }

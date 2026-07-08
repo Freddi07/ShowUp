@@ -16,9 +16,22 @@ function NativeTabLayout() {
         <Icon sf={{ default: 'calendar', selected: 'calendar' }} />
         <Label>Avtaler</Label>
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: 'gearshape', selected: 'gearshape.fill' }} />
-        <Label>Innstillinger</Label>
+      <NativeTabs.Trigger name="customers">
+        <Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} />
+        <Label>Kunder</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="replies">
+        <Icon
+          sf={{
+            default: 'bubble.left.and.bubble.right',
+            selected: 'bubble.left.and.bubble.right.fill',
+          }}
+        />
+        <Label>Svar</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="more">
+        <Icon sf={{ default: 'ellipsis.circle', selected: 'ellipsis.circle.fill' }} />
+        <Label>Mer</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -30,6 +43,15 @@ function ClassicTabLayout() {
   const isDark = colorScheme === 'dark';
   const isIOS = Platform.OS === 'ios';
   const isWeb = Platform.OS === 'web';
+
+  const tabIcon =
+    (sf: string, feather: React.ComponentProps<typeof Feather>['name']) =>
+    ({ color }: { color: string }) =>
+      isIOS ? (
+        <SymbolView name={sf as never} tintColor={color} size={24} />
+      ) : (
+        <Feather name={feather} size={22} color={color} />
+      );
 
   return (
     <Tabs
@@ -55,36 +77,31 @@ function ClassicTabLayout() {
             />
           ) : (
             <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.card },
-              ]}
+              style={[StyleSheet.absoluteFill, { backgroundColor: colors.card }]}
             />
           ),
       }}
     >
       <Tabs.Screen
         name="index"
+        options={{ title: 'Avtaler', tabBarIcon: tabIcon('calendar', 'calendar') }}
+      />
+      <Tabs.Screen
+        name="customers"
+        options={{ title: 'Kunder', tabBarIcon: tabIcon('person.2', 'users') }}
+      />
+      <Tabs.Screen
+        name="replies"
         options={{
-          title: 'Avtaler',
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="calendar" tintColor={color} size={24} />
-            ) : (
-              <Feather name="calendar" size={22} color={color} />
-            ),
+          title: 'Svar',
+          tabBarIcon: tabIcon('bubble.left.and.bubble.right', 'message-circle'),
         }}
       />
       <Tabs.Screen
-        name="settings"
+        name="more"
         options={{
-          title: 'Innstillinger',
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="gearshape" tintColor={color} size={24} />
-            ) : (
-              <Feather name="settings" size={22} color={color} />
-            ),
+          title: 'Mer',
+          tabBarIcon: tabIcon('ellipsis.circle', 'more-horizontal'),
         }}
       />
     </Tabs>

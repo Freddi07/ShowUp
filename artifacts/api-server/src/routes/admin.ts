@@ -4,17 +4,13 @@ import { db } from "@workspace/db";
 import {
   appointmentTable,
   customerTable,
-  integrationTable,
-  messageTemplateTable,
-  notificationSettingsTable,
-  passwordResetTokenTable,
   sessionTable,
-  syncedAppointmentTable,
   userProfileTable,
   userTable,
 } from "@workspace/db/schema";
 import { auth } from "../lib/auth";
 import { isAdminEmail, requireAdminEmail } from "../middlewares/require-user";
+import { deleteUserCompletely } from "../lib/delete-user";
 
 const router = Router();
 
@@ -247,32 +243,8 @@ router.delete("/users/:id", async (req, res) => {
       res.status(403).json({ error: "Cannot delete an administrator" });
       return;
     }
-    // Most user-owned tables reference userId as a plain column (no FK cascade),
-    // so remove all of them in a single transaction before the user row.
-    // Sessions & accounts cascade via FK when the user row is removed.
-    const uid = target.id;
-    await db.transaction(async (tx) => {
-      await tx
-        .delete(notificationSettingsTable)
-        .where(eq(notificationSettingsTable.userId, uid));
-      await tx
-        .delete(passwordResetTokenTable)
-        .where(eq(passwordResetTokenTable.userId, uid));
-      await tx
-        .delete(messageTemplateTable)
-        .where(eq(messageTemplateTable.userId, uid));
-      await tx
-        .delete(syncedAppointmentTable)
-        .where(eq(syncedAppointmentTable.userId, uid));
-      await tx
-        .delete(integrationTable)
-        .where(eq(integrationTable.userId, uid));
-      await tx.delete(customerTable).where(eq(customerTable.userId, uid));
-      await tx
-        .delete(userProfileTable)
-        .where(eq(userProfileTable.userId, uid));
-      await tx.delete(userTable).where(eq(userTable.id, uid));
-    });
+    // Removes all user-owned tenant tables then the user row (see helper).
+    await deleteUserCompletely(target.id);
     res.json({ ok: true });
   } catch (err) {
     console.error("[admin] delete error:", err);

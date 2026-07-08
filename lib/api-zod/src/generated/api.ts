@@ -29,6 +29,14 @@ export const GetMeResponse = zod.object({
 
 
 /**
+ * @summary Permanently delete the signed-in user's account
+ */
+export const DeleteAccountResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary List appointments for the signed-in business
  */
 export const ListAppointmentsResponse = zod.object({
@@ -224,6 +232,81 @@ export const SaveTemplateResponse = zod.object({
   "language": zod.enum(['no', 'en']),
   "body": zod.string(),
   "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List customers for the signed-in business
+ */
+export const ListCustomersQueryParams = zod.object({
+  "q": zod.coerce.string().optional(),
+  "source": zod.coerce.string().optional()
+})
+
+export const ListCustomersResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "source": zod.string().nullable(),
+  "externalId": zod.string().nullable(),
+  "appointmentCount": zod.number(),
+  "lastVisitAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})),
+  "total": zod.number(),
+  "limit": zod.number().nullable()
+})
+
+
+/**
+ * @summary Manually add a single customer
+ */
+export const CreateCustomerBody = zod.object({
+  "name": zod.string(),
+  "phone": zod.string().nullish(),
+  "email": zod.string().nullish()
+})
+
+export const CreateCustomerResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "phone": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "source": zod.string().nullable(),
+  "externalId": zod.string().nullable(),
+  "appointmentCount": zod.number(),
+  "lastVisitAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Current subscription / trial status
+ */
+export const GetTrialStatusResponse = zod.object({
+  "trialActive": zod.boolean(),
+  "trialEndsAt": zod.coerce.date().nullable(),
+  "paymentMethodCollected": zod.boolean(),
+  "subscriptionStatus": zod.string().nullable(),
+  "plan": zod.string().nullable(),
+  "maxCustomers": zod.number().nullable()
+})
+
+
+/**
+ * @summary Aggregate platform metrics (admin only)
+ */
+export const GetAdminStatsResponse = zod.object({
+  "totalUsers": zod.number(),
+  "bannedUsers": zod.number(),
+  "newUsers7d": zod.number(),
+  "activeSubscriptions": zod.number(),
+  "trialingUsers": zod.number(),
+  "totalCustomers": zod.number(),
+  "totalAppointments": zod.number(),
+  "appointmentsByStatus": zod.record(zod.string(), zod.number())
 })
 
 

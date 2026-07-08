@@ -204,6 +204,52 @@ export interface TemplateUpsert {
   body: string;
 }
 
+export interface CustomerListItem {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  source: string | null;
+  externalId: string | null;
+  appointmentCount: number;
+  lastVisitAt: string | null;
+  createdAt: string;
+}
+
+export interface CustomerList {
+  items: CustomerListItem[];
+  total: number;
+  limit: number | null;
+}
+
+export interface CustomerCreate {
+  name: string;
+  phone?: string | null;
+  email?: string | null;
+}
+
+export interface TrialStatus {
+  trialActive: boolean;
+  trialEndsAt: string | null;
+  paymentMethodCollected: boolean;
+  subscriptionStatus: string | null;
+  plan: string | null;
+  maxCustomers: number | null;
+}
+
+export type AdminStatsAppointmentsByStatus = {[key: string]: number};
+
+export interface AdminStats {
+  totalUsers: number;
+  bannedUsers: number;
+  newUsers7d: number;
+  activeSubscriptions: number;
+  trialingUsers: number;
+  totalCustomers: number;
+  totalAppointments: number;
+  appointmentsByStatus: AdminStatsAppointmentsByStatus;
+}
+
 /**
  * Not authenticated
  */
@@ -213,5 +259,10 @@ export type ListRepliesParams = {
 status?: ReplyStatusFilter;
 page?: number;
 limit?: number;
+};
+
+export type ListCustomersParams = {
+q?: string;
+source?: string;
 };
 

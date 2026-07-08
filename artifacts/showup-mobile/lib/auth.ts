@@ -4,6 +4,10 @@ const TOKEN_KEY = 'showup.auth.token';
 
 export const API_BASE = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 
+// The web dashboard is served from the same origin as the API (shared proxy),
+// so "manage on web" links are built from this base.
+export const WEB_BASE = API_BASE;
+
 let cachedToken: string | null = null;
 let loaded = false;
 
@@ -69,6 +73,46 @@ export async function signInWithEmail(
   const body = (await res.json()) as { user?: AuthUser };
   if (!body.user) throw new SignInError('Ugyldig svar fra serveren.');
   return body.user;
+}
+
+export class ChangePasswordError extends Error {}
+
+/** Changes the signed-in user's password via better-auth. */
+export async function changePassword(
+  currentPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const token = await getToken();
+  if (!token) throw new ChangePasswordError('Du er ikke logget inn.');
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/auth/change-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: false,
+      }),
+    });
+  } catch {
+    throw new ChangePasswordError('Kunne ikke koble til serveren. Sjekk nettet.');
+  }
+
+  if (!res.ok) {
+    if (res.status === 400 || res.status === 401) {
+      throw new ChangePasswordError('Feil nåværende passord.');
+    }
+    throw new ChangePasswordError('Kunne ikke endre passord. Prøv igjen.');
+  }
+
+  // better-auth may rotate the session token on password change.
+  const rotated = res.headers.get('set-auth-token');
+  if (rotated) await saveToken(rotated);
 }
 
 /** Signs out locally and best-effort on the server. */
