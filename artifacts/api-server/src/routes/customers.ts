@@ -148,6 +148,7 @@ router.get("/:id", async (req, res) => {
         reminderAt: a.reminderAt.toISOString(),
         status: a.status,
         clientName: a.clientName,
+        clientPhone: a.clientPhone,
         twilioSid: a.twilioSid ?? null,
       })),
     });

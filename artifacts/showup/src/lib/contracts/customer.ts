@@ -31,8 +31,22 @@ export const AppointmentSummary = z.object({
   reminderAt: z.string(),
   status: z.string(),
   clientName: z.string(),
+  clientPhone: z.string().nullable(),
   twilioSid: z.string().nullable(),
 });
+export type AppointmentSummary = z.infer<typeof AppointmentSummary>;
+
+/** Shape returned by the appointment create/edit/remind endpoints. */
+export const AppointmentMutation = z.object({
+  id: z.string(),
+  scheduledAt: z.string(),
+  reminderAt: z.string(),
+  status: z.string(),
+  clientName: z.string(),
+  clientPhone: z.string().nullable(),
+  twilioSid: z.string().nullable(),
+});
+export type AppointmentMutation = z.infer<typeof AppointmentMutation>;
 
 export const CustomerDetail = CustomerItem.extend({
   appointments: z.array(AppointmentSummary),

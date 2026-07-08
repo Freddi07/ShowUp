@@ -20,6 +20,16 @@ Customers reach the dashboard three ways, all funneling through one upsert helpe
 - **CSV import** is parsed client-side (`showup/src/lib/csv.ts`: auto-detects comma/semicolon/tab,
   maps EN+NO column names, positional fallback) then POSTed to `/api/customers/import`.
 
+## Sending SMS from api-server (Twilio connector)
+Twilio is a Replit connection (not env-var creds). api-server fetches settings fresh from the connector API
+(same pattern as stripeClient): `https://$REPLIT_CONNECTORS_HOSTNAME/api/v2/connection?include_secrets=true&connector_names=twilio`,
+X_REPLIT_TOKEN header. Settings keys: `account_sid`, `api_key`, `api_key_secret`, `phone_number`. Send via
+Twilio REST `POST /2010-04-01/Accounts/{account_sid}/Messages.json` with Basic auth `api_key:api_key_secret`.
+The legacy `artifacts/showup/src/lib/business/twilio.ts` (env-var + `server-only`) is dead Next.js code — do NOT use it.
+**Why:** creds are NOT in env; env-var Twilio code silently has no credentials.
+**How to apply:** any server-side timestamp formatted for Norwegian users MUST pass `timeZone: "Europe/Oslo"`
+to toLocale* — the server runs in UTC, so reminder SMS times shift an hour/day otherwise.
+
 ## Replit managed connectors are single-account, not per-end-user OAuth
 Managed connectors exist for Google Calendar, Microsoft Outlook, Calendly, HubSpot (searchIntegrations).
 BUT a Replit connector authorizes ONE account at the Repl/account level — all app users would share that single
