@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
@@ -49,15 +50,21 @@ function RootLayoutNav() {
     }
   }, [user, isLoading, segments, router]);
 
-  // Register for push notifications once the user is signed in.
+  // Register for push notifications once the user is signed in. Push is a
+  // native-only feature — the expo-notifications APIs throw on the web build,
+  // so skip it there.
   useEffect(() => {
-    if (user) {
+    if (user && Platform.OS !== 'web') {
       registerForPushNotifications();
     }
   }, [user]);
 
   // Deep-link into the relevant customer when a reply notification is tapped.
   useEffect(() => {
+    // The notification-response APIs are not available on web; bail out so the
+    // web build doesn't throw an uncaught "not available on web" error.
+    if (Platform.OS === 'web') return;
+
     const openFromData = (data: Record<string, unknown> | undefined) => {
       const customerId = data?.customerId;
       if (typeof customerId === 'string' && customerId) {

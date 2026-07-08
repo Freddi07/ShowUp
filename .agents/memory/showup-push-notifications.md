@@ -26,6 +26,14 @@ status (CONFIRMED / CANCELLED / RESCHEDULE_REQUESTED).
 - Deep-link on tap: notification `data.customerId` → `router.push(/customer/{id})`,
   handled in `app/_layout.tsx` (both warm listener + cold-start
   `getLastNotificationResponseAsync`).
+- **Web-build guard (bit us via a user report):** `expo-notifications` *response*
+  APIs (`getLastNotificationResponseAsync`, `addNotificationResponseReceivedListener`)
+  THROW "not available on web" and surface as a full-screen LogBox redbox in the
+  Replit web preview / "app version". Any call site must be gated behind
+  `Platform.OS !== 'web'`. The registration helper already returns null on web,
+  but the response listeners in `_layout.tsx` are separate and must be guarded too.
+  **Why:** the web preview is how users view the mobile app in Replit, so an
+  uncaught native-only call makes the whole app look broken there.
 
 ## api-client-react codegen quirk (bit me here)
 - `lib/api-client-react/src/generated/*` is produced by orval from
