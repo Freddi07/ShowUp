@@ -102,6 +102,8 @@ export function CustomerDetail({ customerId }: Props) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentSummary | null>(null);
   const [remindingId, setRemindingId] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
 
   const load = useCallback(() => {
     return apiFetch(`/api/customers/${customerId}`, { schema: CustomerDetailSchema })
@@ -126,6 +128,18 @@ export function CustomerDetail({ customerId }: Props) {
       toast.error('Kunne ikke sende påminnelse. Sjekk at kunden har telefonnummer.');
     } finally {
       setRemindingId(null);
+    }
+  }
+
+  async function handleDeleteCustomer() {
+    setDeletingCustomer(true);
+    try {
+      await apiFetch(`/api/customers/${customerId}`, { method: 'DELETE' });
+      toast.success('Kunde slettet');
+      router.push('/dashboard/kunder');
+    } catch {
+      toast.error('Kunne ikke slette kunden');
+      setDeletingCustomer(false);
     }
   }
 
@@ -172,12 +186,25 @@ export function CustomerDetail({ customerId }: Props) {
         >
           ← Kunder
         </Button>
-        <h1 className="text-h2 text-foreground">{customer.name}</h1>
-        {customer.source && (
-          <Badge variant="secondary" className="mt-2">
-            {SOURCE_LABELS[customer.source] ?? customer.source}
-          </Badge>
-        )}
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-h2 text-foreground">{customer.name}</h1>
+            {customer.source && (
+              <Badge variant="secondary" className="mt-2">
+                {SOURCE_LABELS[customer.source] ?? customer.source}
+              </Badge>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 text-destructive hover:text-destructive"
+            onClick={() => setDeleteOpen(true)}
+          >
+            Slett kunde
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
@@ -307,6 +334,36 @@ export function CustomerDetail({ customerId }: Props) {
           load();
         }}
       />
+
+      <Dialog open={deleteOpen} onOpenChange={(v) => !deletingCustomer && setDeleteOpen(v)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Slette {customer.name}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Dette sletter kunden og alle {customer.appointmentCount} avtaler permanent. Handlingen
+            kan ikke angres.
+          </p>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+              disabled={deletingCustomer}
+            >
+              Avbryt
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={handleDeleteCustomer}
+              disabled={deletingCustomer}
+            >
+              {deletingCustomer ? 'Sletter…' : 'Slett kunde'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

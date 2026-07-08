@@ -5,6 +5,22 @@ description: How customers get into the dashboard — CRUD, CSV import, and the 
 
 # ShowUp customers & external ingest
 
+## Inbound SMS replies — shared Twilio number, no tenant context
+Reminders send from ONE shared Twilio number, so the inbound webhook (`/api/sms/inbound`, public,
+no session) has no way to know which tenant a "JA"/"NEI"/"FLYTT" reply belongs to. It matches by
+phone (last 8 digits, to normalize +47/0047/national NO formats) against **REMINDED** appointments
+only (a reply implies a reminder was sent), newest first, and updates atomically
+(`WHERE id=? AND status='REMINDED'`).
+**Why:** matching PENDING or all-users/all-statuses caused a cross-tenant integrity flaw — a reply
+could flip another business's appointment when phone suffixes collide.
+**Known limitation:** if the *same* customer number has open reminders from two tenants at once, the
+reply resolves the most-recently-reminded one — inherent to a shared inbound number. Real fix would
+be a per-appointment reply token in the outbound SMS. Not worth the UX cost yet.
+**How to apply:** the Twilio number's SmsUrl must point at the current public URL — set it to the
+deploy domain (or `TWILIO_WEBHOOK_URL`) on publish, else replies hit the dev URL. Signature
+validation uses that same configured URL (NOT the proxied req URL, which is localhost behind Replit's
+proxy); it is lenient in dev, enforced when `NODE_ENV=production`.
+
 ## Customer ingestion model
 Customers reach the dashboard three ways, all funneling through one upsert helper
 (`api-server/src/lib/customers.ts` `upsertCustomer`): manual add, CSV import (bulk), and a

@@ -185,6 +185,33 @@ router.post("/import", async (req, res) => {
   }
 });
 
+/** DELETE /customers/:id — remove a customer and all their appointments. */
+router.delete("/:id", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const [existing] = await db
+      .select()
+      .from(customerTable)
+      .where(
+        and(eq(customerTable.id, req.params.id), eq(customerTable.userId, userId)),
+      )
+      .limit(1);
+    if (!existing) {
+      res.status(404).json({ error: "Kunde ikke funnet" });
+      return;
+    }
+    // Appointments reference the customer, so remove them first.
+    await db
+      .delete(appointmentTable)
+      .where(eq(appointmentTable.customerId, existing.id));
+    await db.delete(customerTable).where(eq(customerTable.id, existing.id));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[customers] delete error:", err);
+    res.status(500).json({ error: "Kunne ikke slette kunde" });
+  }
+});
+
 /** GET /customers/:id — one customer with its appointments. */
 router.get("/:id", async (req, res) => {
   try {
