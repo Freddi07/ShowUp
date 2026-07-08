@@ -50,7 +50,7 @@ router.use("/svar", svarRouter);
 // Message templates (session-authed read + upsert of SMS templates)
 router.use("/maler", malerRouter);
 
-// Inbound SMS webhook from MessageBird (public; verified by a shared-secret token)
+// Inbound SMS webhook from Twilio (public; verified by Twilio request signature)
 router.use("/sms", smsRouter);
 
 // External ingest (public API-key endpoint + key management)

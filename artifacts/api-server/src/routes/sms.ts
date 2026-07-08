@@ -3,7 +3,7 @@ import { Router } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { appointmentTable, customerTable } from "@workspace/db/schema";
-import { verifyWebhookToken } from "../lib/messagebird";
+import { verifyTwilioSignature } from "../lib/twilio";
 import { sendPushToUser } from "../lib/push";
 
 /** Human-readable Norwegian copy for each status a reply can produce. */
@@ -48,52 +48,39 @@ function classifyReply(
 
 /**
  * PUBLIC: POST /sms/inbound
- * Bird calls this when a customer replies to a reminder SMS. The webhook body is
- * JSON: { service, event: "sms.inbound", payload: { sender.contact.identifierValue
- * (sender number), body.text.text (text), direction } }. We match the reply to
- * the most recent reminded appointment for that phone number and update its
- * status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling). GET is also accepted so
- * the endpoint can be smoke-tested.
+ * Twilio calls this when a customer replies to a reminder SMS. The webhook body
+ * is form-encoded and carries `From` (sender), `Body` (text) and `MessageSid`.
+ * Twilio signs the request with X-Twilio-Signature, which we verify with the
+ * auth token. We match the reply to the most recent reminded appointment for
+ * that phone number and update its status (JA→bekreftet, NEI→avlyst,
+ * FLYTT→ombestilling).
  */
 async function handleInbound(req: Request, res: Response) {
   try {
-    // The shared-secret token is embedded in the webhook URL query (?token=...).
-    // Fail closed in production (reject spoofable status changes); warn but
-    // process in development.
-    const valid = verifyWebhookToken(req.query as Record<string, unknown>);
+    // Verify Twilio's request signature. Behind Replit's proxy (trust proxy is
+    // on) req.protocol/host reflect the public URL Twilio was configured to
+    // call. Fail closed in production (reject spoofable status changes); warn
+    // but process in development.
+    const bodyParams = (req.body as Record<string, unknown>) ?? {};
+    const fullUrl = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+    const valid = verifyTwilioSignature(
+      fullUrl,
+      bodyParams,
+      req.header("X-Twilio-Signature"),
+    );
     if (!valid && process.env.NODE_ENV === "production") {
       res.status(403).send("Forbidden");
       return;
     }
     if (!valid) {
       console.warn(
-        "[sms] webhook token missing/invalid — processing anyway (non-production).",
+        "[sms] Twilio signature missing/invalid — processing anyway (non-production).",
       );
     }
 
-    // Bird webhook body: { event: "sms.inbound", payload: { sender.contact.
-    // identifierValue, body.text.text, direction } }. Ignore non-inbound events
-    // (e.g. delivery status callbacks) — they carry no reply to act on.
-    const event = req.body as {
-      event?: string;
-      payload?: {
-        sender?: { contact?: { identifierValue?: unknown } };
-        body?: { text?: { text?: unknown } };
-        direction?: string;
-      };
-    } | null;
-
-    if (event?.event && event.event !== "sms.inbound") {
-      res.status(200).send("OK");
-      return;
-    }
-
-    const payload = event?.payload;
-    const from = digits(payload?.sender?.contact?.identifierValue);
-    const body =
-      typeof payload?.body?.text?.text === "string"
-        ? payload.body.text.text
-        : "";
+    // Twilio inbound payload: `From` is the sender, `Body` is the message text.
+    const from = digits(bodyParams.From);
+    const body = typeof bodyParams.Body === "string" ? bodyParams.Body : "";
     const decision = classifyReply(body);
 
     if (from && decision) {
@@ -159,11 +146,12 @@ async function handleInbound(req: Request, res: Response) {
       }
     }
 
-    // Acknowledge with 200 so MessageBird does not retry the delivery.
-    res.status(200).send("OK");
+    // Acknowledge with empty TwiML so Twilio sends no auto-reply and does not
+    // retry the delivery.
+    res.type("text/xml").status(200).send("<Response></Response>");
   } catch (err) {
     console.error("[sms] inbound error:", err);
-    res.status(200).send("OK");
+    res.type("text/xml").status(200).send("<Response></Response>");
   }
 }
 
