@@ -47,6 +47,8 @@ async function buildAll() {
       "isolated-vm",
       "lightningcss",
       "pg-native",
+      // reads .sql migration files from disk at runtime; must not be bundled
+      "stripe-replit-sync",
       "oracledb",
       "mongodb-client-encryption",
       "nodemailer",

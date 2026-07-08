@@ -1,1 +1,2 @@
 - [ShowUp Vite port decisions](showup-port.md) — Next.js→Vite migration: key shims, file layout, package boundaries
+- [ShowUp Stripe billing](showup-stripe.md) — connector uses settings.secret; externalize stripe-replit-sync (bundling drops .sql); bind checkout via client_reference_id

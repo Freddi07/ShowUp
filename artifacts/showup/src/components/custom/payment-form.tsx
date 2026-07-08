@@ -5,6 +5,7 @@ import { useSearchParams } from '@/lib/compat/next-navigation';
 import { useEffect, useState } from 'react';
 import { StripeCheckoutButton } from '@/components/custom/stripe-checkout-button';
 import { apiFetch } from '@/lib/api-client';
+import { useSession } from '@/lib/auth-client';
 import { SIGNUP_CHECKOUT_URL } from '@/lib/checkout-config';
 import { BillingVerifyResponseSchema } from '@/lib/contracts/stripe';
 
@@ -20,6 +21,8 @@ export function PaymentForm() {
 }
 
 function CheckoutPrompt() {
+  const { data: session, isPending } = useSession();
+
   if (!SIGNUP_CHECKOUT_URL) {
     return (
       <p className="text-sm text-destructive">
@@ -28,6 +31,33 @@ function CheckoutPrompt() {
     );
   }
 
+  if (isPending) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <p className="text-sm text-muted-foreground">Laster…</p>
+      </div>
+    );
+  }
+
+  const userId = session?.user?.id;
+  const email = session?.user?.email;
+
+  if (!userId) {
+    return (
+      <p className="text-sm text-destructive">
+        Du må være innlogget for å starte prøveperioden. Logg inn og prøv igjen.
+      </p>
+    );
+  }
+
+  // Bind the Stripe Checkout session to this user so the server can verify
+  // ownership before activating the subscription. Payment Links accept
+  // client_reference_id (and prefilled_email) as query parameters.
+  const sep = SIGNUP_CHECKOUT_URL.includes('?') ? '&' : '?';
+  const checkoutUrl =
+    `${SIGNUP_CHECKOUT_URL}${sep}client_reference_id=${encodeURIComponent(userId)}` +
+    (email ? `&prefilled_email=${encodeURIComponent(email)}` : '');
+
   return (
     <div className="flex flex-col gap-5">
       <p className="flex items-start gap-2 rounded-md border border-border/60 bg-muted/40 px-3 py-2.5 text-sm text-muted-foreground">
@@ -35,7 +65,7 @@ function CheckoutPrompt() {
         Kortet ditt belastes ikke i prøveperioden. Du kan si opp når som helst.
       </p>
 
-      <StripeCheckoutButton href={SIGNUP_CHECKOUT_URL} className="w-full" size="lg">
+      <StripeCheckoutButton href={checkoutUrl} className="w-full" size="lg">
         Bekreft og start prøveperiode
       </StripeCheckoutButton>
 

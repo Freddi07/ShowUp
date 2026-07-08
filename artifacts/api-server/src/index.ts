@@ -1,5 +1,6 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { initStripe } from "./lib/stripe-init";
 
 const rawPort = process.env["PORT"];
 
@@ -14,6 +15,10 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+// Kick off Stripe schema migration, webhook setup, and data sync in the
+// background. Non-fatal — the server starts serving immediately.
+void initStripe();
 
 app.listen(port, (err) => {
   if (err) {

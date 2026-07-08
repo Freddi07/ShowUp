@@ -18,3 +18,8 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+VITE_SIGNUP_CHECKOUT_URL = "https://buy.stripe.com/test_14AcN4eid0RE22Sdgt4Vy00"
