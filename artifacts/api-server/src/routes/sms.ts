@@ -47,20 +47,17 @@ async function handleInbound(req: Request, res: Response) {
       ...((req.body as Record<string, unknown>) ?? {}),
     };
 
-    const hasSecret = !!process.env.VONAGE_SIGNATURE_SECRET;
-    const valid = hasSecret ? verifyVonageSignature(params) : false;
-
-    if (hasSecret && !valid && process.env.NODE_ENV === "production") {
+    // `verifyVonageSignature` returns false when no signature secret is set, so
+    // an unsigned webhook is treated as invalid. Fail closed in production
+    // (reject spoofable status changes); warn but process in development.
+    const valid = verifyVonageSignature(params);
+    if (!valid && process.env.NODE_ENV === "production") {
       res.status(403).send("Forbidden");
       return;
     }
-    if (!hasSecret) {
+    if (!valid) {
       console.warn(
-        "[sms] VONAGE_SIGNATURE_SECRET not set — inbound webhook is unverified.",
-      );
-    } else if (!valid) {
-      console.warn(
-        "[sms] Vonage signature check failed — processing anyway (non-production).",
+        "[sms] Vonage signature missing/invalid — processing anyway (non-production).",
       );
     }
 

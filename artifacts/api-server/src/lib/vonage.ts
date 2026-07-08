@@ -44,7 +44,7 @@ export async function sendSms(to: string, body: string): Promise<string> {
     api_key: apiKey,
     api_secret: apiSecret,
     from,
-    to: to.replace(/^\+/, ""),
+    to: to.replace(/\D/g, ""),
     text: body,
   });
 
@@ -96,8 +96,11 @@ export function verifyVonageSignature(params: Record<string, unknown>): boolean 
 
   const method = (process.env.VONAGE_SIGNATURE_METHOD || "sha256").toLowerCase();
 
+  // Vonage excludes the `sig` param and any empty-valued params from the base
+  // string, sorts the rest by key, and joins them as `&key=value` with `&`/`=`
+  // inside values replaced by `_`.
   const base = Object.keys(params)
-    .filter((key) => key !== "sig")
+    .filter((key) => key !== "sig" && String(params[key]) !== "")
     .sort()
     .map((key) => `&${key}=${String(params[key]).replace(/[&=]/g, "_")}`)
     .join("");
