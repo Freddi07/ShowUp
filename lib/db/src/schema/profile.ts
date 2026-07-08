@@ -13,6 +13,9 @@ export const userProfileTable = pgTable(
     stripePaymentMethodId: text("stripePaymentMethodId"),
     paymentMethodCollected: boolean("paymentMethodCollected").notNull().default(false),
     subscriptionStatus: text("subscriptionStatus"),
+    // Per-user ingest API key for automatically adding customers from external
+    // platforms (Zapier/Make/webhooks). Null until the user generates one.
+    apiKey: text("apiKey").unique(),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },

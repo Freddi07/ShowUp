@@ -1,6 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { ApiIngestCard } from './api-ingest-card';
 import { AutomasterSetupForm } from './automaster-setup-form';
 import { BooksySetupForm } from './booksy-setup-form';
 import { ClinikoSetupForm } from './cliniko-setup-form';
@@ -49,6 +50,8 @@ export function IntegrationsPage() {
           Koble til eksterne systemer for automatisk synkronisering av kunder og avtaler.
         </p>
       </div>
+
+      <ApiIngestCard />
 
       <IntegrationSection
         heading="Kalender"

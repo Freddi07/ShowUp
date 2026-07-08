@@ -81,7 +81,7 @@ export function DashboardNav() {
             href={item.href}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+              'flex h-11 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-medium transition-colors lg:h-10 lg:px-3',
               active
                 ? 'bg-secondary text-secondary-foreground'
                 : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
@@ -97,7 +97,7 @@ export function DashboardNav() {
           href="/admin"
           aria-current={pathname === '/admin' ? 'page' : undefined}
           className={cn(
-            'flex h-10 shrink-0 items-center gap-2 rounded-md px-3 text-sm font-medium transition-colors',
+            'flex h-11 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-medium transition-colors lg:h-10 lg:px-3',
             pathname === '/admin'
               ? 'bg-secondary text-secondary-foreground'
               : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
