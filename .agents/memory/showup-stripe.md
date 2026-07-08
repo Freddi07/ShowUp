@@ -25,8 +25,21 @@ successfully while creating **zero** tables (later calls fail with `relation "st
 **How to apply:** Keep `stripe-replit-sync` in the `external:` array in `artifacts/api-server/build.mjs`
 so it loads from `node_modules` at runtime. Same class of problem as sharp / @google-cloud (path-traversal file reads).
 
+## Trial is app-owned — NO Stripe trial on the payment links
+The 14-day free trial is owned by the app: `auth.ts` sets `UserProfile.trialEndsAt = createdAt + 14d`
+at signup, and `/api/trial/status` compares to now. The Stripe Payment Links must NOT add
+`subscription_data.trial_period_days` (that would stack a second trial on top → paying after 28 days).
+Links are billed immediately; after checkout the subscription is `active` (not `trialing`).
+
+**Why:** two independent trials (app + Stripe) is the bug the owner explicitly wanted gone.
+**How to apply:** `seed-stripe.ts` creates trial-free links and is self-healing — on re-run it
+deactivates any legacy link that still carries a trial and creates a replacement, printing new
+`ENV VITE_CHECKOUT_URL_*` lines. Creating a new link changes its URL, so after re-seeding you MUST
+update the `VITE_CHECKOUT_URL_STARTER/PRO/BUSINESS` + `VITE_SIGNUP_CHECKOUT_URL` shared env vars and
+restart `artifacts/showup: web` (VITE vars are build-time).
+
 ## Checkout ownership binding (static Payment Link model)
-The app uses a single static Stripe Payment Link (`VITE_SIGNUP_CHECKOUT_URL`) with a 14-day trial,
+The app uses a single static Stripe Payment Link (`VITE_SIGNUP_CHECKOUT_URL`, trial-free),
 then verifies server-side via `POST /api/billing/verify { sessionId }`.
 
 **Why:** Verifying only that a Checkout Session is "complete" lets any leaked/replayed session id from

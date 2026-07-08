@@ -3,8 +3,12 @@ import { getUncachableStripeClient } from "./stripeClient";
 
 /**
  * Seeds the ShowUp subscription plans (Starter / Pro / Business) in Stripe:
- * one product + monthly price + Payment Link (with a 14-day free trial) each.
- * Idempotent: safe to re-run — existing products/prices/links are reused.
+ * one product + monthly price + Payment Link (billed immediately, NO Stripe
+ * trial) each. The 14-day free trial is owned entirely by the app (set from the
+ * user's creation date in auth.ts), so Stripe must not add its own trial on top.
+ * Idempotent + self-healing: safe to re-run. Existing trial-free links are
+ * reused; any legacy link that still carries a Stripe trial is deactivated and
+ * replaced with a trial-free one.
  *
  * Prints an `ENV <KEY>=<url>` line per plan so the caller can wire the
  * VITE_* checkout URLs into the frontend.
@@ -20,7 +24,6 @@ interface PlanSeed {
 }
 
 const CURRENCY = (process.env.SHOWUP_PRICE_CURRENCY ?? "nok").toLowerCase();
-const TRIAL_DAYS = Number(process.env.SHOWUP_TRIAL_DAYS ?? "14");
 
 const PLANS: PlanSeed[] = [
   {
@@ -79,23 +82,31 @@ async function ensurePlan(stripe: Stripe, plan: PlanSeed, successUrl: string) {
     console.log(`Created price: ${price.id} (${plan.amount} ${CURRENCY}/mo)`);
   }
 
-  // 3. Payment Link with trial (reuse an active link for this price if present).
+  // 3. Payment Link WITHOUT a Stripe trial. Reuse an active trial-free link for
+  //    this price; deactivate any legacy link that still carries a trial.
   const links = await stripe.paymentLinks.list({ active: true, limit: 100 });
   let link: Stripe.PaymentLink | undefined;
   for (const l of links.data) {
     const items = await stripe.paymentLinks.listLineItems(l.id, { limit: 10 });
-    if (items.data.some((it) => it.price?.id === price.id)) {
-      link = l;
-      break;
+    if (!items.data.some((it) => it.price?.id === price.id)) continue;
+
+    const trialDays = l.subscription_data?.trial_period_days ?? null;
+    if (trialDays) {
+      await stripe.paymentLinks.update(l.id, { active: false });
+      console.log(
+        `Deactivated legacy trial link for ${plan.name} (${l.id}, ${trialDays}d trial)`,
+      );
+      continue;
     }
+    link = l;
+    break;
   }
   if (!link) {
     link = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
-      subscription_data: { trial_period_days: TRIAL_DAYS },
       after_completion: { type: "redirect", redirect: { url: successUrl } },
     });
-    console.log(`Created payment link for ${plan.name}: ${link.url}`);
+    console.log(`Created trial-free payment link for ${plan.name}: ${link.url}`);
   }
 
   return link.url;

@@ -1,5 +1,6 @@
 // Stripe Checkout payment links — set the VITE_* vars below at build time.
-// Each link is a Stripe Payment Link created with a 14-day trial and
+// Each link is a Stripe Payment Link billed immediately (NO Stripe trial — the
+// 14-day free trial is owned by the app, from the user's signup date) with
 //   success_url: <app>/signup/payment?session_id={CHECKOUT_SESSION_ID}
 // Regenerate them with: pnpm --filter @workspace/scripts run seed-stripe
 
