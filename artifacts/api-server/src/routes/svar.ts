@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { appointmentTable, customerTable } from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
-import { sendSms } from "../lib/vonage";
+import { sendSms } from "../lib/telnyx";
 
 const router = Router();
 router.use(requireUser);

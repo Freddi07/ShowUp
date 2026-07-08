@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { WebhookHandlers } from "./lib/webhookHandlers";
+import { handleInbound } from "./routes/sms";
 
 const app: Express = express();
 
@@ -49,6 +50,14 @@ app.post(
       return res.status(400).json({ error: "Webhook processing error" });
     }
   },
+);
+
+// Telnyx inbound-SMS webhook needs the raw body for Ed25519 signature
+// verification, so register it BEFORE express.json().
+app.post(
+  "/api/sms/inbound",
+  express.raw({ type: "*/*" }),
+  handleInbound,
 );
 
 app.use(express.json());

@@ -8,7 +8,6 @@ import customersRouter from "./customers";
 import appointmentsRouter from "./appointments";
 import svarRouter from "./svar";
 import malerRouter from "./maler";
-import smsRouter from "./sms";
 import ingestRouter from "./ingest";
 import meRouter from "./me";
 import statsRouter from "./stats";
@@ -50,8 +49,8 @@ router.use("/svar", svarRouter);
 // Message templates (session-authed read + upsert of SMS templates)
 router.use("/maler", malerRouter);
 
-// Inbound SMS webhook from Twilio (public; verified by Twilio signature)
-router.use("/sms", smsRouter);
+// Inbound SMS webhook (Telnyx) is registered in app.ts before express.json()
+// so it can read the raw body for Ed25519 signature verification.
 
 // External ingest (public API-key endpoint + key management)
 router.use("/ingest", ingestRouter);
