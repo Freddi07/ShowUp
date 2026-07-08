@@ -20,11 +20,14 @@ Customers reach the dashboard three ways, all funneling through one upsert helpe
 - **CSV import** is parsed client-side (`showup/src/lib/csv.ts`: auto-detects comma/semicolon/tab,
   maps EN+NO column names, positional fallback) then POSTed to `/api/customers/import`.
 
-## Sending SMS from api-server (Twilio connector)
-Twilio is a Replit connection (not env-var creds). api-server fetches settings fresh from the connector API
-(same pattern as stripeClient): `https://$REPLIT_CONNECTORS_HOSTNAME/api/v2/connection?include_secrets=true&connector_names=twilio`,
-X_REPLIT_TOKEN header. Settings keys: `account_sid`, `api_key`, `api_key_secret`, `phone_number`. Send via
-Twilio REST `POST /2010-04-01/Accounts/{account_sid}/Messages.json` with Basic auth `api_key:api_key_secret`.
+## Sending SMS from api-server (Twilio)
+**Preferred path: plain Account SID + Auth Token as Replit secrets** — `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN`
+(32-char token from Twilio Console home) / `TWILIO_PHONE_NUMBER`. `lib/twilio.ts` uses these first; Basic auth
+`accountSid:authToken`, POST Twilio REST `/2010-04-01/Accounts/{sid}/Messages.json`. **Why:** the Replit Twilio
+*connector* stored an invalid API-key secret (only 21 chars; real Twilio secrets are 32) and reconnecting kept
+re-saving the same bad value → persistent 401 "Authenticate" (code 20003) via BOTH manual Basic-auth and the
+official `connectors.proxy`. Auth Token is always valid and needs no API-key creation, so it sidesteps the whole issue.
+Connector fetch remains as a fallback (settings keys: account_sid/api_key/api_key_secret/phone_number).
 The legacy `artifacts/showup/src/lib/business/twilio.ts` (env-var + `server-only`) is dead Next.js code — do NOT use it.
 **Why:** creds are NOT in env; env-var Twilio code silently has no credentials.
 **How to apply:** any server-side timestamp formatted for Norwegian users MUST pass `timeZone: "Europe/Oslo"`
