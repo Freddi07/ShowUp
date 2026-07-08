@@ -3,7 +3,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { appointmentTable, customerTable } from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
-import { sendSms } from "../lib/sveve";
+import { sendSms } from "../lib/messagebird";
 
 const router = Router();
 router.use(requireUser);
@@ -253,7 +253,7 @@ router.post("/:id/remind", async (req, res) => {
       console.error("[appointments] SMS send failed:", smsErr);
       res
         .status(502)
-        .json({ error: "Kunne ikke sende SMS. Sjekk Twilio-tilkoblingen." });
+        .json({ error: "Kunne ikke sende SMS. Sjekk SMS-tilkoblingen." });
       return;
     }
 

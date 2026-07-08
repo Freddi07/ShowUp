@@ -3,7 +3,7 @@ import { Router } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { appointmentTable, customerTable } from "@workspace/db/schema";
-import { verifySveveToken } from "../lib/sveve";
+import { verifyWebhookToken } from "../lib/messagebird";
 import { sendPushToUser } from "../lib/push";
 
 /** Human-readable Norwegian copy for each status a reply can produce. */
@@ -48,12 +48,12 @@ function classifyReply(
 
 /**
  * PUBLIC: GET/POST /sms/inbound
- * Sveve calls this when a customer replies to a reminder SMS (messages sent with
- * reply=true). Sveve delivers replies via GET (query params) or POST (form body)
- * depending on the portal config, so we merge both. The reply payload carries
- * `number` (sender), `msg` (text) and `id` (original message id). We match the
- * reply to the most recent reminded appointment for that phone number and update
- * its status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling).
+ * MessageBird calls this when a customer replies to a reminder SMS. MessageBird
+ * can deliver via GET (query params) or POST (form/JSON body) depending on the
+ * webhook config, so we merge both. The inbound payload carries `originator`
+ * (sender number), `body` (text) and `id` (message id). We match the reply to
+ * the most recent reminded appointment for that phone number and update its
+ * status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling).
  */
 async function handleInbound(req: Request, res: Response) {
   try {
@@ -62,23 +62,23 @@ async function handleInbound(req: Request, res: Response) {
       ...((req.body as Record<string, unknown>) ?? {}),
     };
 
-    // Sveve webhooks are unsigned, so we verify a shared-secret token embedded
-    // in the webhook URL. Fail closed in production (reject spoofable status
-    // changes); warn but process in development.
-    const valid = verifySveveToken(params);
+    // We verify a shared-secret token embedded in the webhook URL. Fail closed
+    // in production (reject spoofable status changes); warn but process in
+    // development.
+    const valid = verifyWebhookToken(params);
     if (!valid && process.env.NODE_ENV === "production") {
       res.status(403).send("Forbidden");
       return;
     }
     if (!valid) {
       console.warn(
-        "[sms] Sveve token missing/invalid — processing anyway (non-production).",
+        "[sms] webhook token missing/invalid — processing anyway (non-production).",
       );
     }
 
-    // Sveve inbound payload: `number` is the sender, `msg` is the message.
-    const from = digits(params.number);
-    const body = typeof params.msg === "string" ? params.msg : "";
+    // MessageBird inbound payload: `originator` is the sender, `body` is the text.
+    const from = digits(params.originator);
+    const body = typeof params.body === "string" ? params.body : "";
     const decision = classifyReply(body);
 
     if (from && decision) {
@@ -144,7 +144,7 @@ async function handleInbound(req: Request, res: Response) {
       }
     }
 
-    // Acknowledge with 200 so Sveve does not retry the delivery.
+    // Acknowledge with 200 so MessageBird does not retry the delivery.
     res.status(200).send("OK");
   } catch (err) {
     console.error("[sms] inbound error:", err);

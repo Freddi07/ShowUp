@@ -4,7 +4,7 @@
 - [ShowUp customers & ingest](showup-customers-ingest.md) — customers via manual/CSV/public API-key endpoint; upsert dedup externalId→phone→email; no real OAuth integrations; drizzle push is interactive (use SQL for additive DDL)
 - [ShowUp plan entitlements](showup-entitlements.md) — customer-cap is the only enforceable plan tier (100/500/∞); effective plan resolution + atomic cap via advisory lock; stats not gated (no backend route)
 - [Expo ↔ better-auth cross-origin](mobile-bearer-auth.md) — mobile uses bearer tokens; Expo domain MUST be in better-auth trustedOrigins or sign-in 403s
-- [ShowUp SMS via Vonage](showup-sms-vonage.md) — SMS is Vonage (not Twilio), no Replit integration; inbound GET/POST msisdn/text; signature canonicalization + prod fail-closed gotchas
+- [ShowUp SMS via MessageBird](showup-sms-messagebird.md) — SMS is MessageBird classic REST API (chosen over Bird API to avoid KYC); alphanumeric sender for outbound, dedicated number for replies; inbound originator/body
 - [BookPling brand vs internal showup](showup-branding.md) — display brand is BookPling; ALL internal ids (pkg/dir/slug/component/test-login/URLs) stay "showup" — don't rename them
 - [Expo e2e testing](expo-e2e-testing.md) — tester must use absolute $REPLIT_EXPO_DEV_DOMAIN URL not /mobile/ (proxy 502); test login needs seed run (build-seed.mjs)
 - [ShowUp push notifications](showup-push-notifications.md) — Expo Push API (no creds); owner via appointment→customer.userId; mobile uses direct fetch; stale orval codegen breaks mobile typecheck (run api-spec codegen)
