@@ -47,25 +47,20 @@ function classifyReply(
 }
 
 /**
- * PUBLIC: GET/POST /sms/inbound
- * MessageBird calls this when a customer replies to a reminder SMS. MessageBird
- * can deliver via GET (query params) or POST (form/JSON body) depending on the
- * webhook config, so we merge both. The inbound payload carries `originator`
- * (sender number), `body` (text) and `id` (message id). We match the reply to
+ * PUBLIC: POST /sms/inbound
+ * Bird calls this when a customer replies to a reminder SMS. The webhook body is
+ * JSON: { service, event: "sms.inbound", payload: { sender.contact.identifierValue
+ * (sender number), body.text.text (text), direction } }. We match the reply to
  * the most recent reminded appointment for that phone number and update its
- * status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling).
+ * status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling). GET is also accepted so
+ * the endpoint can be smoke-tested.
  */
 async function handleInbound(req: Request, res: Response) {
   try {
-    const params: Record<string, unknown> = {
-      ...(req.query as Record<string, unknown>),
-      ...((req.body as Record<string, unknown>) ?? {}),
-    };
-
-    // We verify a shared-secret token embedded in the webhook URL. Fail closed
-    // in production (reject spoofable status changes); warn but process in
-    // development.
-    const valid = verifyWebhookToken(params);
+    // The shared-secret token is embedded in the webhook URL query (?token=...).
+    // Fail closed in production (reject spoofable status changes); warn but
+    // process in development.
+    const valid = verifyWebhookToken(req.query as Record<string, unknown>);
     if (!valid && process.env.NODE_ENV === "production") {
       res.status(403).send("Forbidden");
       return;
@@ -76,9 +71,29 @@ async function handleInbound(req: Request, res: Response) {
       );
     }
 
-    // MessageBird inbound payload: `originator` is the sender, `body` is the text.
-    const from = digits(params.originator);
-    const body = typeof params.body === "string" ? params.body : "";
+    // Bird webhook body: { event: "sms.inbound", payload: { sender.contact.
+    // identifierValue, body.text.text, direction } }. Ignore non-inbound events
+    // (e.g. delivery status callbacks) — they carry no reply to act on.
+    const event = req.body as {
+      event?: string;
+      payload?: {
+        sender?: { contact?: { identifierValue?: unknown } };
+        body?: { text?: { text?: unknown } };
+        direction?: string;
+      };
+    } | null;
+
+    if (event?.event && event.event !== "sms.inbound") {
+      res.status(200).send("OK");
+      return;
+    }
+
+    const payload = event?.payload;
+    const from = digits(payload?.sender?.contact?.identifierValue);
+    const body =
+      typeof payload?.body?.text?.text === "string"
+        ? payload.body.text.text
+        : "";
     const decision = classifyReply(body);
 
     if (from && decision) {
