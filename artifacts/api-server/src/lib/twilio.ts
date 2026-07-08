@@ -6,12 +6,30 @@
 
 interface TwilioCredentials {
   accountSid: string;
-  apiKey: string;
-  apiKeySecret: string;
+  /** Basic-auth username: either the Account SID or an API Key SID. */
+  authUser: string;
+  /** Basic-auth password: either the Auth Token or the API Key secret. */
+  authPass: string;
   fromNumber: string;
 }
 
 async function getTwilioCredentials(): Promise<TwilioCredentials> {
+  // Preferred: plain Account SID + Auth Token supplied as Replit Secrets.
+  // The Auth Token is shown directly on the Twilio Console home page and is
+  // always valid, so this avoids the API-key setup entirely.
+  const envSid = process.env.TWILIO_ACCOUNT_SID;
+  const envToken = process.env.TWILIO_AUTH_TOKEN;
+  const envFrom = process.env.TWILIO_PHONE_NUMBER;
+  if (envSid && envToken && envFrom) {
+    return {
+      accountSid: envSid,
+      authUser: envSid,
+      authPass: envToken,
+      fromNumber: envFrom,
+    };
+  }
+
+  // Fallback: credentials from the Replit Twilio connection (API key based).
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY
     ? "repl " + process.env.REPL_IDENTITY
@@ -61,8 +79,8 @@ async function getTwilioCredentials(): Promise<TwilioCredentials> {
 
   return {
     accountSid: s.account_sid,
-    apiKey: s.api_key,
-    apiKeySecret: s.api_key_secret,
+    authUser: s.api_key,
+    authPass: s.api_key_secret,
     fromNumber: s.phone_number,
   };
 }
@@ -72,10 +90,10 @@ async function getTwilioCredentials(): Promise<TwilioCredentials> {
  * Throws on failure (caller decides how to surface it).
  */
 export async function sendSms(to: string, body: string): Promise<string> {
-  const { accountSid, apiKey, apiKeySecret, fromNumber } =
+  const { accountSid, authUser, authPass, fromNumber } =
     await getTwilioCredentials();
 
-  const auth = Buffer.from(`${apiKey}:${apiKeySecret}`).toString("base64");
+  const auth = Buffer.from(`${authUser}:${authPass}`).toString("base64");
   const form = new URLSearchParams({ To: to, From: fromNumber, Body: body });
 
   const resp = await fetch(
