@@ -20,6 +20,10 @@ tags:
     description: Notification settings
   - name: account
     description: Account operations
+  - name: replies
+    description: Customer reply operations
+  - name: templates
+    description: Message template operations
 paths:
   /healthz:
     get:
@@ -182,6 +186,126 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/StatsResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /svar:
+    get:
+      operationId: listReplies
+      tags: [replies]
+      summary: List customer replies to reminders
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ReplyStatusFilter"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reply list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReplyList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /svar/{id}:
+    patch:
+      operationId: updateReply
+      tags: [replies]
+      summary: Update a reply's status or send a follow-up
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReplyUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: SMS delivery failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /maler:
+    get:
+      operationId: listTemplates
+      tags: [templates]
+      summary: List the signed-in user's message templates
+      responses:
+        "200":
+          description: Template list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TemplateList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /maler/{type}:
+    put:
+      operationId: saveTemplate
+      tags: [templates]
+      summary: Create or update a message template
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/TemplateType"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TemplateUpsert"
+      responses:
+        "200":
+          description: Saved template
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Template"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
   /notification-settings:
@@ -508,3 +632,114 @@ components:
           type: boolean
         autoFollowUp:
           type: boolean
+    OkResult:
+      type: object
+      properties:
+        ok:
+          type: boolean
+      required:
+        - ok
+    ReplyStatusFilter:
+      type: string
+      enum:
+        - all
+        - REMINDED
+        - CONFIRMED
+        - CANCELLED
+        - RESCHEDULE_REQUESTED
+    ReplyItem:
+      type: object
+      properties:
+        id:
+          type: string
+        clientName:
+          type: string
+        clientPhone:
+          type: string
+        scheduledAt:
+          type: string
+          format: date-time
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - clientName
+        - clientPhone
+        - scheduledAt
+        - status
+        - updatedAt
+    ReplyList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReplyItem"
+        total:
+          type: integer
+      required:
+        - items
+        - total
+    ReplyUpdate:
+      type: object
+      properties:
+        status:
+          $ref: "#/components/schemas/AppointmentStatus"
+        action:
+          type: string
+          enum:
+            - update_status
+            - send_followup
+    TemplateType:
+      type: string
+      enum:
+        - reminder_24h
+        - reminder_2h
+        - confirmation
+    TemplateLanguage:
+      type: string
+      enum:
+        - "no"
+        - en
+    Template:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          $ref: "#/components/schemas/TemplateType"
+        language:
+          $ref: "#/components/schemas/TemplateLanguage"
+        body:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - type
+        - language
+        - body
+        - updatedAt
+    TemplateList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Template"
+      required:
+        - items
+    TemplateUpsert:
+      type: object
+      properties:
+        language:
+          $ref: "#/components/schemas/TemplateLanguage"
+        body:
+          type: string
+      required:
+        - language
+        - body

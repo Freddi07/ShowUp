@@ -26,11 +26,19 @@ import type {
   CustomerDetail,
   ErrorResponse,
   HealthStatus,
+  ListRepliesParams,
   Me,
   NotificationSettings,
   NotificationSettingsUpdate,
+  OkResult,
   RemindRequest,
+  ReplyList,
+  ReplyUpdate,
   StatsResponse,
+  Template,
+  TemplateList,
+  TemplateType,
+  TemplateUpsert,
   UnauthorizedResponse
 } from './api.schemas';
 
@@ -588,6 +596,309 @@ export function useGetStats<TData = Awaited<ReturnType<typeof getStats>>, TError
 
 
 
+
+export const getListRepliesUrl = (params?: ListRepliesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/svar?${stringifiedParams}` : `/api/svar`
+}
+
+/**
+ * @summary List customer replies to reminders
+ */
+export const listReplies = async (params?: ListRepliesParams, options?: RequestInit): Promise<ReplyList> => {
+
+  return customFetch<ReplyList>(getListRepliesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListRepliesQueryKey = (params?: ListRepliesParams,) => {
+    return [
+    `/api/svar`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListRepliesQueryOptions = <TData = Awaited<ReturnType<typeof listReplies>>, TError = ErrorType<UnauthorizedResponse>>(params?: ListRepliesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReplies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListRepliesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listReplies>>> = ({ signal }) => listReplies(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listReplies>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListRepliesQueryResult = NonNullable<Awaited<ReturnType<typeof listReplies>>>
+export type ListRepliesQueryError = ErrorType<UnauthorizedResponse>
+
+
+/**
+ * @summary List customer replies to reminders
+ */
+
+export function useListReplies<TData = Awaited<ReturnType<typeof listReplies>>, TError = ErrorType<UnauthorizedResponse>>(
+ params?: ListRepliesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listReplies>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListRepliesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateReplyUrl = (id: string,) => {
+
+
+
+
+  return `/api/svar/${id}`
+}
+
+/**
+ * @summary Update a reply's status or send a follow-up
+ */
+export const updateReply = async (id: string,
+    replyUpdate: ReplyUpdate, options?: RequestInit): Promise<OkResult> => {
+
+  return customFetch<OkResult>(getUpdateReplyUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(replyUpdate)
+  }
+);}
+
+
+
+
+export const getUpdateReplyMutationOptions = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReply>>, TError,{id: string;data: BodyType<ReplyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateReply>>, TError,{id: string;data: BodyType<ReplyUpdate>}, TContext> => {
+
+const mutationKey = ['updateReply'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateReply>>, {id: string;data: BodyType<ReplyUpdate>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateReply(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateReplyMutationResult = NonNullable<Awaited<ReturnType<typeof updateReply>>>
+    export type UpdateReplyMutationBody = BodyType<ReplyUpdate>
+    export type UpdateReplyMutationError = ErrorType<ErrorResponse | UnauthorizedResponse>
+
+    /**
+ * @summary Update a reply's status or send a follow-up
+ */
+export const useUpdateReply = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateReply>>, TError,{id: string;data: BodyType<ReplyUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateReply>>,
+        TError,
+        {id: string;data: BodyType<ReplyUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateReplyMutationOptions(options));
+    }
+
+export const getListTemplatesUrl = () => {
+
+
+
+
+  return `/api/maler`
+}
+
+/**
+ * @summary List the signed-in user's message templates
+ */
+export const listTemplates = async ( options?: RequestInit): Promise<TemplateList> => {
+
+  return customFetch<TemplateList>(getListTemplatesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTemplatesQueryKey = () => {
+    return [
+    `/api/maler`
+    ] as const;
+    }
+
+
+export const getListTemplatesQueryOptions = <TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<UnauthorizedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTemplatesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTemplates>>> = ({ signal }) => listTemplates({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTemplatesQueryResult = NonNullable<Awaited<ReturnType<typeof listTemplates>>>
+export type ListTemplatesQueryError = ErrorType<UnauthorizedResponse>
+
+
+/**
+ * @summary List the signed-in user's message templates
+ */
+
+export function useListTemplates<TData = Awaited<ReturnType<typeof listTemplates>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTemplates>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTemplatesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSaveTemplateUrl = (type: TemplateType,) => {
+
+
+
+
+  return `/api/maler/${type}`
+}
+
+/**
+ * @summary Create or update a message template
+ */
+export const saveTemplate = async (type: TemplateType,
+    templateUpsert: TemplateUpsert, options?: RequestInit): Promise<Template> => {
+
+  return customFetch<Template>(getSaveTemplateUrl(type),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(templateUpsert)
+  }
+);}
+
+
+
+
+export const getSaveTemplateMutationOptions = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveTemplate>>, TError,{type: TemplateType;data: BodyType<TemplateUpsert>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveTemplate>>, TError,{type: TemplateType;data: BodyType<TemplateUpsert>}, TContext> => {
+
+const mutationKey = ['saveTemplate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveTemplate>>, {type: TemplateType;data: BodyType<TemplateUpsert>}> = (props) => {
+          const {type,data} = props ?? {};
+
+          return  saveTemplate(type,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveTemplateMutationResult = NonNullable<Awaited<ReturnType<typeof saveTemplate>>>
+    export type SaveTemplateMutationBody = BodyType<TemplateUpsert>
+    export type SaveTemplateMutationError = ErrorType<ErrorResponse | UnauthorizedResponse>
+
+    /**
+ * @summary Create or update a message template
+ */
+export const useSaveTemplate = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveTemplate>>, TError,{type: TemplateType;data: BodyType<TemplateUpsert>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveTemplate>>,
+        TError,
+        {type: TemplateType;data: BodyType<TemplateUpsert>},
+        TContext
+      > => {
+      return useMutation(getSaveTemplateMutationOptions(options));
+    }
 
 export const getGetNotificationSettingsUrl = () => {
 

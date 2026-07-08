@@ -154,6 +154,80 @@ export const GetStatsResponse = zod.object({
 
 
 /**
+ * @summary List customer replies to reminders
+ */
+export const ListRepliesQueryParams = zod.object({
+  "status": zod.enum(['all', 'REMINDED', 'CONFIRMED', 'CANCELLED', 'RESCHEDULE_REQUESTED']).optional(),
+  "page": zod.coerce.number().optional(),
+  "limit": zod.coerce.number().optional()
+})
+
+export const ListRepliesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "clientName": zod.string(),
+  "clientPhone": zod.string(),
+  "scheduledAt": zod.coerce.date(),
+  "status": zod.enum(['PENDING', 'REMINDED', 'CONFIRMED', 'CANCELLED', 'RESCHEDULE_REQUESTED']),
+  "updatedAt": zod.coerce.date()
+})),
+  "total": zod.number()
+})
+
+
+/**
+ * @summary Update a reply's status or send a follow-up
+ */
+export const UpdateReplyParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateReplyBody = zod.object({
+  "status": zod.enum(['PENDING', 'REMINDED', 'CONFIRMED', 'CANCELLED', 'RESCHEDULE_REQUESTED']).optional(),
+  "action": zod.enum(['update_status', 'send_followup']).optional()
+})
+
+export const UpdateReplyResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary List the signed-in user's message templates
+ */
+export const ListTemplatesResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['reminder_24h', 'reminder_2h', 'confirmation']),
+  "language": zod.enum(['no', 'en']),
+  "body": zod.string(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Create or update a message template
+ */
+export const SaveTemplateParams = zod.object({
+  "type": zod.enum(['reminder_24h', 'reminder_2h', 'confirmation'])
+})
+
+export const SaveTemplateBody = zod.object({
+  "language": zod.enum(['no', 'en']),
+  "body": zod.string()
+})
+
+export const SaveTemplateResponse = zod.object({
+  "id": zod.string(),
+  "type": zod.enum(['reminder_24h', 'reminder_2h', 'confirmation']),
+  "language": zod.enum(['no', 'en']),
+  "body": zod.string(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Get notification settings
  */
 export const GetNotificationSettingsResponse = zod.object({

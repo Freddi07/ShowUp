@@ -7,6 +7,7 @@ import adminRouter from "./admin";
 import customersRouter from "./customers";
 import appointmentsRouter from "./appointments";
 import svarRouter from "./svar";
+import malerRouter from "./maler";
 import smsRouter from "./sms";
 import ingestRouter from "./ingest";
 import meRouter from "./me";
@@ -37,6 +38,9 @@ router.use("/appointments", appointmentsRouter);
 
 // Replies to reminders (session-authed list + status/follow-up actions)
 router.use("/svar", svarRouter);
+
+// Message templates (session-authed read + upsert of SMS templates)
+router.use("/maler", malerRouter);
 
 // Inbound SMS webhook from Twilio (public; verified by Twilio signature)
 router.use("/sms", smsRouter);

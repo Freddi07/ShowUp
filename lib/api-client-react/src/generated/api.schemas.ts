@@ -128,8 +128,90 @@ export interface NotificationSettingsUpdate {
   autoFollowUp?: boolean;
 }
 
+export interface OkResult {
+  ok: boolean;
+}
+
+export type ReplyStatusFilter = typeof ReplyStatusFilter[keyof typeof ReplyStatusFilter];
+
+
+export const ReplyStatusFilter = {
+  all: 'all',
+  REMINDED: 'REMINDED',
+  CONFIRMED: 'CONFIRMED',
+  CANCELLED: 'CANCELLED',
+  RESCHEDULE_REQUESTED: 'RESCHEDULE_REQUESTED',
+} as const;
+
+export interface ReplyItem {
+  id: string;
+  clientName: string;
+  clientPhone: string;
+  scheduledAt: string;
+  status: AppointmentStatus;
+  updatedAt: string;
+}
+
+export interface ReplyList {
+  items: ReplyItem[];
+  total: number;
+}
+
+export type ReplyUpdateAction = typeof ReplyUpdateAction[keyof typeof ReplyUpdateAction];
+
+
+export const ReplyUpdateAction = {
+  update_status: 'update_status',
+  send_followup: 'send_followup',
+} as const;
+
+export interface ReplyUpdate {
+  status?: AppointmentStatus;
+  action?: ReplyUpdateAction;
+}
+
+export type TemplateType = typeof TemplateType[keyof typeof TemplateType];
+
+
+export const TemplateType = {
+  reminder_24h: 'reminder_24h',
+  reminder_2h: 'reminder_2h',
+  confirmation: 'confirmation',
+} as const;
+
+export type TemplateLanguage = typeof TemplateLanguage[keyof typeof TemplateLanguage];
+
+
+export const TemplateLanguage = {
+  no: 'no',
+  en: 'en',
+} as const;
+
+export interface Template {
+  id: string;
+  type: TemplateType;
+  language: TemplateLanguage;
+  body: string;
+  updatedAt: string;
+}
+
+export interface TemplateList {
+  items: Template[];
+}
+
+export interface TemplateUpsert {
+  language: TemplateLanguage;
+  body: string;
+}
+
 /**
  * Not authenticated
  */
 export type UnauthorizedResponse = ErrorResponse;
+
+export type ListRepliesParams = {
+status?: ReplyStatusFilter;
+page?: number;
+limit?: number;
+};
 
