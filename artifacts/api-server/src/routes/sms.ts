@@ -1,8 +1,9 @@
 import type { Request, Response } from "express";
+import { Router } from "express";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { appointmentTable, customerTable } from "@workspace/db/schema";
-import { verifyTelnyxSignature } from "../lib/telnyx";
+import { verifySveveToken } from "../lib/sveve";
 import { sendPushToUser } from "../lib/push";
 
 /** Human-readable Norwegian copy for each status a reply can produce. */
@@ -17,6 +18,8 @@ const REPLY_COPY: Record<
     verb: "ønsker å flytte timen",
   },
 };
+
+const router = Router();
 
 /** Keep only digits so "+47 992 69 968" and "004799269968" compare equal. */
 function digits(value: unknown): string {
@@ -43,70 +46,39 @@ function classifyReply(
   return null;
 }
 
-/** Read a header case-insensitively as a single string. */
-function header(req: Request, name: string): string {
-  const v = req.headers[name.toLowerCase()];
-  return Array.isArray(v) ? (v[0] ?? "") : (v ?? "");
-}
-
 /**
- * PUBLIC: POST /api/sms/inbound
- * Telnyx calls this webhook for inbound messages (customer replies) and for
- * outbound delivery receipts. This route is mounted with `express.raw` so we
- * receive the exact bytes needed for Ed25519 signature verification. We match a
- * reply to the most recent reminded appointment for that phone number and
- * update its status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling).
+ * PUBLIC: GET/POST /sms/inbound
+ * Sveve calls this when a customer replies to a reminder SMS (messages sent with
+ * reply=true). Sveve delivers replies via GET (query params) or POST (form body)
+ * depending on the portal config, so we merge both. The reply payload carries
+ * `number` (sender), `msg` (text) and `id` (original message id). We match the
+ * reply to the most recent reminded appointment for that phone number and update
+ * its status (JA→bekreftet, NEI→avlyst, FLYTT→ombestilling).
  */
-export async function handleInbound(req: Request, res: Response) {
+async function handleInbound(req: Request, res: Response) {
   try {
-    const raw: Buffer = Buffer.isBuffer(req.body)
-      ? req.body
-      : Buffer.from(
-          typeof req.body === "string" ? req.body : JSON.stringify(req.body ?? {}),
-          "utf8",
-        );
+    const params: Record<string, unknown> = {
+      ...(req.query as Record<string, unknown>),
+      ...((req.body as Record<string, unknown>) ?? {}),
+    };
 
-    // `verifyTelnyxSignature` returns false when no public key is configured, so
-    // an unsigned webhook is treated as invalid. Fail closed in production
-    // (reject spoofable status changes); warn but process in development.
-    const valid = verifyTelnyxSignature(
-      raw,
-      header(req, "telnyx-signature-ed25519"),
-      header(req, "telnyx-timestamp"),
-    );
+    // Sveve webhooks are unsigned, so we verify a shared-secret token embedded
+    // in the webhook URL. Fail closed in production (reject spoofable status
+    // changes); warn but process in development.
+    const valid = verifySveveToken(params);
     if (!valid && process.env.NODE_ENV === "production") {
       res.status(403).send("Forbidden");
       return;
     }
     if (!valid) {
       console.warn(
-        "[sms] Telnyx signature missing/invalid — processing anyway (non-production).",
+        "[sms] Sveve token missing/invalid — processing anyway (non-production).",
       );
     }
 
-    let event: {
-      data?: {
-        event_type?: string;
-        payload?: { from?: { phone_number?: string }; text?: string };
-      };
-    } | null = null;
-    try {
-      event = JSON.parse(raw.toString("utf8"));
-    } catch {
-      event = null;
-    }
-
-    // Telnyx posts delivery receipts (message.sent/finalized) to the same URL;
-    // only inbound messages carry a customer reply.
-    if (event?.data?.event_type !== "message.received") {
-      res.status(200).send("OK");
-      return;
-    }
-
-    // Telnyx inbound payload: `from.phone_number` is the sender, `text` the body.
-    const payload = event.data.payload ?? {};
-    const from = digits(payload.from?.phone_number);
-    const body = typeof payload.text === "string" ? payload.text : "";
+    // Sveve inbound payload: `number` is the sender, `msg` is the message.
+    const from = digits(params.number);
+    const body = typeof params.msg === "string" ? params.msg : "";
     const decision = classifyReply(body);
 
     if (from && decision) {
@@ -172,10 +144,15 @@ export async function handleInbound(req: Request, res: Response) {
       }
     }
 
-    // Acknowledge with 200 so Telnyx does not retry the delivery.
+    // Acknowledge with 200 so Sveve does not retry the delivery.
     res.status(200).send("OK");
   } catch (err) {
     console.error("[sms] inbound error:", err);
     res.status(200).send("OK");
   }
 }
+
+router.get("/inbound", handleInbound);
+router.post("/inbound", handleInbound);
+
+export default router;
