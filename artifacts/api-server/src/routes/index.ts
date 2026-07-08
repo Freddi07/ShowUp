@@ -14,6 +14,7 @@ import meRouter from "./me";
 import statsRouter from "./stats";
 import notificationSettingsRouter from "./notification-settings";
 import pushRouter from "./push";
+import mobileOauthRouter from "./mobile-oauth";
 
 const router: IRouter = Router();
 
@@ -22,6 +23,9 @@ router.use(healthRouter);
 
 // Authentication (better-auth handles all /api/auth/* paths)
 router.use("/auth", authRouter);
+
+// Native social sign-in bridge for the Expo app (in-app browser OAuth).
+router.use("/mobile-oauth", mobileOauthRouter);
 
 // Trial & billing
 router.use("/trial", trialRouter);

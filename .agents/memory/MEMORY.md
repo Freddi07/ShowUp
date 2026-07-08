@@ -9,3 +9,4 @@
 - [Expo e2e testing](expo-e2e-testing.md) — tester must use absolute $REPLIT_EXPO_DEV_DOMAIN URL not /mobile/ (proxy 502); test login needs seed run (build-seed.mjs)
 - [ShowUp push notifications](showup-push-notifications.md) — Expo Push API (no creds); owner via appointment→customer.userId; mobile uses direct fetch; stale orval codegen breaks mobile typecheck (run api-spec codegen)
 - [ShowUp account deletion cascade](showup-account-deletion.md) — delete appointments (via customer subquery) BEFORE customers (FK, no cascade); cover all userId tables incl. pushToken; shared by self-serve + admin
+- [ShowUp mobile social login](showup-mobile-social-login.md) — native Google via server /mobile-oauth bridge (in-app browser → deep link, signed session cookie = bearer); Express route order + multi Set-Cookie getSetCookie() + returnUrl app-scheme-only gotchas

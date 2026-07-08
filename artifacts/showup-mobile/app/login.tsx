@@ -21,11 +21,29 @@ import colors from '@/constants/colors';
 export default function LoginScreen() {
   const c = useColors();
   const router = useRouter();
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const onGoogle = async () => {
+    if (loading || googleLoading) return;
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      // A user-cancelled sheet is not an error worth showing.
+      if (e instanceof SignInError && e.message === 'CANCELLED') return;
+      setError(
+        e instanceof SignInError ? e.message : 'Noe gikk galt. Prøv igjen.',
+      );
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const onSubmit = async () => {
     if (loading) return;
@@ -68,6 +86,34 @@ export default function LoginScreen() {
         </Text>
 
         <View style={styles.form}>
+          <Pressable
+            testID="google-login"
+            onPress={onGoogle}
+            disabled={googleLoading || loading}
+            style={[
+              styles.googleBtn,
+              {
+                backgroundColor: c.card,
+                borderColor: c.border,
+                borderRadius: c.radius,
+                opacity: googleLoading ? 0.7 : 1,
+              },
+            ]}
+          >
+            <Ionicons name="logo-google" size={18} color={c.foreground} />
+            <Text style={[styles.googleText, { color: c.foreground }]}>
+              {googleLoading ? 'Kobler til …' : 'Fortsett med Google'}
+            </Text>
+          </Pressable>
+
+          <View style={styles.dividerRow}>
+            <View style={[styles.divider, { backgroundColor: c.border }]} />
+            <Text style={[styles.dividerText, { color: c.mutedForeground }]}>
+              eller
+            </Text>
+            <View style={[styles.divider, { backgroundColor: c.border }]} />
+          </View>
+
           <Text style={[styles.label, { color: c.foreground }]}>E-post</Text>
           <TextInput
             testID="login-email"
@@ -191,6 +237,32 @@ const styles = StyleSheet.create({
   },
   form: {
     marginTop: 36,
+  },
+  googleBtn: {
+    height: 52,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  googleText: {
+    fontFamily: 'Inter_600SemiBold',
+    fontSize: 16,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginVertical: 20,
+  },
+  divider: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontFamily: 'Inter_500Medium',
+    fontSize: 13,
   },
   label: {
     fontFamily: 'Inter_600SemiBold',

@@ -1,4 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 
 const TOKEN_KEY = 'showup.auth.token';
 
@@ -91,6 +93,60 @@ export async function requestPasswordReset(email: string): Promise<void> {
   } catch {
     throw new SignInError('Kunne ikke koble til serveren. Sjekk nettet.');
   }
+}
+
+/** Raised (with message 'CANCELLED') when the user closes the Google sheet. */
+const GOOGLE_CANCELLED = 'CANCELLED';
+
+/**
+ * Signs in with Google via an in-app browser. The server bridge
+ * (`/api/mobile-oauth/google`) runs the OAuth flow and deep-links back with the
+ * signed session token, which we store like any other bearer token.
+ */
+export async function signInWithGoogle(): Promise<AuthUser> {
+  const returnUrl = Linking.createURL('auth-callback');
+  const startUrl = `${API_BASE}/api/mobile-oauth/google?returnUrl=${encodeURIComponent(returnUrl)}`;
+
+  let result: WebBrowser.WebBrowserAuthSessionResult;
+  try {
+    result = await WebBrowser.openAuthSessionAsync(startUrl, returnUrl);
+  } catch {
+    throw new SignInError('Kunne ikke åpne Google-innlogging.');
+  }
+
+  if (result.type === 'cancel' || result.type === 'dismiss') {
+    throw new SignInError(GOOGLE_CANCELLED);
+  }
+  if (result.type !== 'success' || !result.url) {
+    throw new SignInError('Google-innlogging mislyktes. Prøv igjen.');
+  }
+
+  const { queryParams } = Linking.parse(result.url);
+  const token = queryParams?.token;
+  if (queryParams?.error || typeof token !== 'string' || !token) {
+    throw new SignInError('Google-innlogging mislyktes. Prøv igjen.');
+  }
+
+  await saveToken(token);
+  return fetchCurrentUser();
+}
+
+/** Loads the signed-in user from better-auth using the stored bearer token. */
+async function fetchCurrentUser(): Promise<AuthUser> {
+  const token = await getToken();
+  if (!token) throw new SignInError('Fant ingen økt. Prøv igjen.');
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/auth/get-session`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  } catch {
+    throw new SignInError('Kunne ikke koble til serveren. Sjekk nettet.');
+  }
+  if (!res.ok) throw new SignInError('Kunne ikke hente brukeren. Prøv igjen.');
+  const body = (await res.json()) as { user?: AuthUser } | null;
+  if (!body?.user) throw new SignInError('Kunne ikke hente brukeren. Prøv igjen.');
+  return body.user;
 }
 
 export class ChangePasswordError extends Error {}

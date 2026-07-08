@@ -41,7 +41,19 @@ router.all("/{*splat}", async (req, res) => {
   try {
     const response = await auth.handler(request);
     res.status(response.status);
-    response.headers.forEach((value, key) => res.setHeader(key, value));
+    // Forward Set-Cookie headers individually — Headers.forEach collapses
+    // multiple Set-Cookie values into one comma-joined string, which breaks the
+    // several cookies OAuth sets (state, PKCE, session). getSetCookie() keeps
+    // them separate.
+    const setCookies =
+      (
+        response.headers as unknown as { getSetCookie?: () => string[] }
+      ).getSetCookie?.() ?? [];
+    response.headers.forEach((value, key) => {
+      if (key.toLowerCase() === "set-cookie") return;
+      res.setHeader(key, value);
+    });
+    for (const cookie of setCookies) res.append("set-cookie", cookie);
     const text = await response.text();
     res.send(text);
   } catch (err) {

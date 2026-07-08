@@ -12,6 +12,7 @@ import {
   type AuthUser,
   getToken,
   signInWithEmail,
+  signInWithGoogle as doGoogleSignIn,
   signOut as doSignOut,
 } from '@/lib/auth';
 import { unregisterForPushNotifications } from '@/lib/notifications';
@@ -20,6 +21,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -62,6 +64,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  const signInWithGoogle = useCallback(async () => {
+    const u = await doGoogleSignIn();
+    setUser(u);
+  }, []);
+
   const signOut = useCallback(async () => {
     // Drop this device's push token first, while the bearer is still valid.
     await unregisterForPushNotifications();
@@ -71,8 +78,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [queryClient]);
 
   const value = useMemo(
-    () => ({ user, isLoading, signIn, signOut }),
-    [user, isLoading, signIn, signOut],
+    () => ({ user, isLoading, signIn, signInWithGoogle, signOut }),
+    [user, isLoading, signIn, signInWithGoogle, signOut],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
