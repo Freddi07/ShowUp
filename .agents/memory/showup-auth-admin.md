@@ -15,6 +15,16 @@ The request-a-reset endpoint is **`POST /api/auth/request-password-reset`** (bod
 or hit `/api/auth/request-password-reset`. The server's `emailAndPassword.sendResetPassword` builds the reset
 URL from `APP_URL` regardless of the `redirectTo` value.
 
+## Resend only delivers to the account owner until a domain is verified
+Transactional email (`api-server/src/lib/email.ts`) sends via the Resend connector with FROM defaulting to
+`onboarding@resend.dev`. In that state Resend returns **403 validation_error** for any recipient other than the
+Resend account owner ("You can only send testing emails to your own email address"). So password-reset / welcome
+mail silently fails for real users (send is fire-and-forget, logged as "[email] Resend send failed").
+
+**Why:** reported as "no reset email arrives" — the endpoint returns 200 (generic message) but the send 403s.
+**How to apply:** to send to arbitrary users the OWNER must verify a domain at resend.com/domains, then set
+`EMAIL_FROM="ShowUp <no-reply@theirdomain>"`. Code already reads `EMAIL_FROM`; no code change needed — this is an ops step.
+
 ## Admin dashboard access = email allowlist (not role)
 Admin access is gated by an **email allowlist**, not the better-auth `role` field, per an explicit product
 requirement ("only <owner email> can access"). Backend: `requireAdminEmail` middleware checks the session
