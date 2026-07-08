@@ -5,8 +5,12 @@ import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-type PlanId = 'starter' | 'pro' | 'business';
+import { useSession } from '@/lib/auth-client';
+import {
+  PLAN_CHECKOUT_URLS,
+  type PlanId,
+  withCheckoutBinding,
+} from '@/lib/checkout-config';
 
 interface Plan {
   id: PlanId;
@@ -17,14 +21,6 @@ interface Plan {
   features: string[];
   highlighted: boolean;
 }
-
-const CONTACT_EMAIL = 'showup-8@polsia.app';
-
-const PLAN_LABELS: Record<PlanId, string> = {
-  starter: 'Starter (199 kr/mnd)',
-  pro: 'Pro (499 kr/mnd)',
-  business: 'Business (999 kr/mnd)',
-};
 
 const PLANS: Plan[] = [
   {
@@ -72,24 +68,33 @@ const PLANS: Plan[] = [
 ];
 
 export function UpgradePlansIsland() {
+  const { data: session, isPending } = useSession();
   const [loadingPlan, setLoadingPlan] = useState<PlanId | null>(null);
 
+  const userId = session?.user?.id;
+  const email = session?.user?.email;
+
   function handleSelectPlan(planId: PlanId) {
+    if (!userId) return;
+    const url = withCheckoutBinding(PLAN_CHECKOUT_URLS[planId], userId, email);
+    if (!url) return;
     setLoadingPlan(planId);
-    const subject = encodeURIComponent(`Oppgradering til ${PLAN_LABELS[planId]}`);
-    const body = encodeURIComponent(
-      `Hei,\n\nJeg ønsker å oppgradere til ShowUp ${PLAN_LABELS[planId]}.\n\nMVH`,
-    );
-    window.location.href = `mailto:${CONTACT_EMAIL}?subject=${subject}&body=${body}`;
-    setTimeout(() => setLoadingPlan(null), 2000);
+    window.location.assign(url);
   }
 
   return (
     <div className="flex flex-col items-center gap-8">
+      {!isPending && !userId && (
+        <p className="text-sm text-destructive">
+          Du må være innlogget for å velge en plan. Logg inn og prøv igjen.
+        </p>
+      )}
       <div className="grid w-full max-w-4xl gap-6 sm:grid-cols-3">
         {PLANS.map((plan) => {
           const isLoading = loadingPlan === plan.id;
-          const isDisabled = loadingPlan !== null;
+          const planUrl = PLAN_CHECKOUT_URLS[plan.id];
+          const isDisabled =
+            loadingPlan !== null || isPending || !userId || !planUrl;
           return (
             <Card
               key={plan.id}

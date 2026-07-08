@@ -3,6 +3,7 @@
 
 import { useEffect } from 'react';
 import { AdminPage } from '@/components/custom/admin/admin-page';
+import { isAdminEmail } from '@/lib/admin-config';
 import { useSession } from '@/lib/auth-client';
 import { useRouter } from '@/lib/compat/next-navigation';
 
@@ -10,11 +11,7 @@ export default function AdminPageRoute() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
 
-  const isAdmin =
-    session?.user?.role
-      ?.split(',')
-      .map((r: string) => r.trim())
-      .includes('admin') ?? false;
+  const isAdmin = isAdminEmail(session?.user?.email);
 
   useEffect(() => {
     if (isPending) return;

@@ -1,2 +1,3 @@
 - [ShowUp Vite port decisions](showup-port.md) — Next.js→Vite migration: key shims, file layout, package boundaries
-- [ShowUp Stripe billing](showup-stripe.md) — connector uses settings.secret; externalize stripe-replit-sync (bundling drops .sql); bind checkout via client_reference_id
+- [ShowUp Stripe billing](showup-stripe.md) — connector uses settings.secret; externalize stripe-replit-sync (bundling drops .sql); bind checkout via client_reference_id; 3 plan links via seed-stripe → VITE_CHECKOUT_URL_*
+- [ShowUp auth & admin](showup-auth-admin.md) — reset endpoint is /api/auth/request-password-reset; admin = email allowlist (ADMIN_EMAILS/VITE_ADMIN_EMAIL); user delete must clear tenant tables manually

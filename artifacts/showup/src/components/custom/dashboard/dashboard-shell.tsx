@@ -8,6 +8,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { isAdminEmail } from '@/lib/admin-config';
 import { apiFetch } from '@/lib/api-client';
 import { signOut, useSession } from '@/lib/auth-client';
 import { DashboardNav } from './dashboard-nav';
@@ -16,19 +17,10 @@ export interface DashboardShellProps {
   children: ReactNode;
 }
 
-function hasRole(role: string | null | undefined, expected: string) {
-  return (
-    role
-      ?.split(',')
-      .map((item) => item.trim())
-      .includes(expected) ?? false
-  );
-}
-
 export function DashboardShell({ children }: DashboardShellProps) {
   const { data: session, isPending } = useSession();
   const router = useRouter();
-  const isAdmin = hasRole(session?.user?.role, 'admin');
+  const isAdmin = isAdminEmail(session?.user?.email);
   const [trialChecked, setTrialChecked] = useState(false);
 
   useEffect(() => {

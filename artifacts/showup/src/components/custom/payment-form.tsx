@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { StripeCheckoutButton } from '@/components/custom/stripe-checkout-button';
 import { apiFetch } from '@/lib/api-client';
 import { useSession } from '@/lib/auth-client';
-import { SIGNUP_CHECKOUT_URL } from '@/lib/checkout-config';
+import { SIGNUP_CHECKOUT_URL, withCheckoutBinding } from '@/lib/checkout-config';
 import { BillingVerifyResponseSchema } from '@/lib/contracts/stripe';
 
 export function PaymentForm() {
@@ -51,12 +51,8 @@ function CheckoutPrompt() {
   }
 
   // Bind the Stripe Checkout session to this user so the server can verify
-  // ownership before activating the subscription. Payment Links accept
-  // client_reference_id (and prefilled_email) as query parameters.
-  const sep = SIGNUP_CHECKOUT_URL.includes('?') ? '&' : '?';
-  const checkoutUrl =
-    `${SIGNUP_CHECKOUT_URL}${sep}client_reference_id=${encodeURIComponent(userId)}` +
-    (email ? `&prefilled_email=${encodeURIComponent(email)}` : '');
+  // ownership before activating the subscription.
+  const checkoutUrl = withCheckoutBinding(SIGNUP_CHECKOUT_URL, userId, email);
 
   return (
     <div className="flex flex-col gap-5">

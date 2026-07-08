@@ -62,3 +62,33 @@ export async function requireAdmin(
     next();
   });
 }
+
+/**
+ * Allowlist of emails permitted to access the admin dashboard.
+ * Defaults to a single owner email; override with ADMIN_EMAILS (comma-separated).
+ */
+export const ADMIN_EMAILS: string[] = (
+  process.env.ADMIN_EMAILS ?? "snillefredrik@gmail.com"
+)
+  .split(",")
+  .map((e) => e.trim().toLowerCase())
+  .filter(Boolean);
+
+export function isAdminEmail(email?: string | null): boolean {
+  return !!email && ADMIN_EMAILS.includes(email.toLowerCase());
+}
+
+/** Require an authenticated user whose email is on the admin allowlist. */
+export async function requireAdminEmail(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  await requireUser(req, res, () => {
+    if (!isAdminEmail(req.user?.email)) {
+      res.status(403).json({ error: "Forbidden" });
+      return;
+    }
+    next();
+  });
+}

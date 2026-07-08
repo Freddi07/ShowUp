@@ -13,8 +13,11 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
+import { isAdminEmail } from '@/lib/admin-config';
 import { apiFetch } from '@/lib/api-client';
+import { useSession } from '@/lib/auth-client';
 import { type AdminUserItem, AdminUsersResponse } from '@/lib/contracts/admin-users';
+import { AdminStats } from './admin-stats';
 
 function formatDate(iso: string | null): string {
   if (!iso) return 'Aldri';
@@ -31,6 +34,7 @@ type ActionState = {
 } | null;
 
 export function AdminPage() {
+  const { data: session } = useSession();
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [total, setTotal] = useState(0);
   const [search, setSearch] = useState('');
@@ -113,6 +117,18 @@ export function AdminPage() {
   const isRunning = (userId: string, action?: ActionKind) =>
     activeAction?.userId === userId && (!action || activeAction.action === action);
 
+  // Second layer of protection (backend enforces the same allowlist).
+  if (session && !isAdminEmail(session.user?.email)) {
+    return (
+      <div className="flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
+        <h1 className="text-h3">Ingen tilgang</h1>
+        <p className="text-sm text-muted-foreground">
+          Denne siden er kun tilgjengelig for administratorer.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -125,6 +141,9 @@ export function AdminPage() {
           Totalt: {total} brukere
         </Badge>
       </div>
+
+      {/* Overview metrics */}
+      <AdminStats />
 
       <Separator />
 

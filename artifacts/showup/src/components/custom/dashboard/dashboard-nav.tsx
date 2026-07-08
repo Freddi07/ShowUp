@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'wouter';
 import { usePathname } from '@/lib/compat/next-navigation';
+import { isAdminEmail } from '@/lib/admin-config';
 import { useSession } from '@/lib/auth-client';
 import { cn } from '@/lib/utils';
 
@@ -63,11 +64,7 @@ const navItems = [
 export function DashboardNav() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const isAdmin =
-    session?.user?.role
-      ?.split(',')
-      .map((r) => r.trim())
-      .includes('admin') ?? false;
+  const isAdmin = isAdminEmail(session?.user?.email);
 
   return (
     <nav

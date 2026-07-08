@@ -2,72 +2,81 @@ import type Stripe from "stripe";
 import { getUncachableStripeClient } from "./stripeClient";
 
 /**
- * Seeds the ShowUp subscription product, price, and a Stripe Payment Link with
- * a 14-day free trial. Idempotent: safe to re-run.
+ * Seeds the ShowUp subscription plans (Starter / Pro / Business) in Stripe:
+ * one product + monthly price + Payment Link (with a 14-day free trial) each.
+ * Idempotent: safe to re-run — existing products/prices/links are reused.
  *
- * Config via env (with sensible defaults):
- *   SHOWUP_PLAN_NAME       default "ShowUp"
- *   SHOWUP_PRICE_AMOUNT    minor units, default 19900 (199.00 kr)
- *   SHOWUP_PRICE_CURRENCY  default "nok"
- *   SHOWUP_TRIAL_DAYS      default 14
- *   SHOWUP_SUCCESS_URL     redirect target after checkout completes
+ * Prints an `ENV <KEY>=<url>` line per plan so the caller can wire the
+ * VITE_* checkout URLs into the frontend.
  *
- * Run: pnpm --filter @workspace/scripts exec tsx src/seed-stripe.ts
+ * Run: pnpm --filter @workspace/scripts run seed-stripe
  */
-async function main() {
-  const stripe = await getUncachableStripeClient();
 
-  const planName = process.env.SHOWUP_PLAN_NAME ?? "ShowUp";
-  const amount = Number(process.env.SHOWUP_PRICE_AMOUNT ?? "19900");
-  const currency = (process.env.SHOWUP_PRICE_CURRENCY ?? "nok").toLowerCase();
-  const trialDays = Number(process.env.SHOWUP_TRIAL_DAYS ?? "14");
+interface PlanSeed {
+  envKey: string;
+  name: string;
+  amount: number; // minor units (øre)
+  description: string;
+}
 
-  const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
-  const successUrl =
-    process.env.SHOWUP_SUCCESS_URL ??
-    (domain
-      ? `https://${domain}/showup/signup/payment?session_id={CHECKOUT_SESSION_ID}`
-      : undefined);
+const CURRENCY = (process.env.SHOWUP_PRICE_CURRENCY ?? "nok").toLowerCase();
+const TRIAL_DAYS = Number(process.env.SHOWUP_TRIAL_DAYS ?? "14");
 
-  if (!successUrl) {
-    throw new Error(
-      "No success URL. Set SHOWUP_SUCCESS_URL or ensure REPLIT_DOMAINS is available.",
-    );
-  }
+const PLANS: PlanSeed[] = [
+  {
+    envKey: "VITE_CHECKOUT_URL_STARTER",
+    name: "ShowUp Starter",
+    amount: 19900,
+    description: "For enkeltpersoner og små bedrifter — opptil 100 kunder.",
+  },
+  {
+    envKey: "VITE_CHECKOUT_URL_PRO",
+    name: "ShowUp Pro",
+    amount: 49900,
+    description: "For voksende bedrifter — opptil 500 kunder, alle kanaler.",
+  },
+  {
+    envKey: "VITE_CHECKOUT_URL_BUSINESS",
+    name: "ShowUp Business",
+    amount: 99900,
+    description: "For store virksomheter — ubegrenset antall kunder.",
+  },
+];
 
-  // 1. Product (idempotent by name).
+async function ensurePlan(stripe: Stripe, plan: PlanSeed, successUrl: string) {
+  // 1. Product (idempotent by exact name).
   const found = await stripe.products.search({
-    query: `name:'${planName}' AND active:'true'`,
+    query: `name:'${plan.name}' AND active:'true'`,
   });
   let product = found.data[0];
-  if (product) {
-    console.log(`Product exists: ${product.name} (${product.id})`);
-  } else {
+  if (!product) {
     product = await stripe.products.create({
-      name: planName,
-      description: "Automatiske SMS-påminnelser for avtaler",
+      name: plan.name,
+      description: plan.description,
     });
-    console.log(`Created product: ${product.name} (${product.id})`);
+    console.log(`Created product: ${plan.name} (${product.id})`);
   }
 
-  // 2. Price (reuse a matching recurring price if present).
-  const prices = await stripe.prices.list({ product: product.id, active: true, limit: 100 });
+  // 2. Monthly price (reuse a matching one if present).
+  const prices = await stripe.prices.list({
+    product: product.id,
+    active: true,
+    limit: 100,
+  });
   let price = prices.data.find(
     (p) =>
-      p.unit_amount === amount &&
-      p.currency === currency &&
+      p.unit_amount === plan.amount &&
+      p.currency === CURRENCY &&
       p.recurring?.interval === "month",
   );
-  if (price) {
-    console.log(`Price exists: ${price.id} (${amount} ${currency}/mo)`);
-  } else {
+  if (!price) {
     price = await stripe.prices.create({
       product: product.id,
-      unit_amount: amount,
-      currency,
+      unit_amount: plan.amount,
+      currency: CURRENCY,
       recurring: { interval: "month" },
     });
-    console.log(`Created price: ${price.id} (${amount} ${currency}/mo)`);
+    console.log(`Created price: ${price.id} (${plan.amount} ${CURRENCY}/mo)`);
   }
 
   // 3. Payment Link with trial (reuse an active link for this price if present).
@@ -80,19 +89,46 @@ async function main() {
       break;
     }
   }
-  if (link) {
-    console.log(`Payment link exists: ${link.url}`);
-  } else {
+  if (!link) {
     link = await stripe.paymentLinks.create({
       line_items: [{ price: price.id, quantity: 1 }],
-      subscription_data: { trial_period_days: trialDays },
+      subscription_data: { trial_period_days: TRIAL_DAYS },
       after_completion: { type: "redirect", redirect: { url: successUrl } },
     });
-    console.log(`Created payment link: ${link.url}`);
+    console.log(`Created payment link for ${plan.name}: ${link.url}`);
+  }
+
+  return link.url;
+}
+
+async function main() {
+  const stripe = await getUncachableStripeClient();
+
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
+  const successUrl =
+    process.env.SHOWUP_SUCCESS_URL ??
+    (domain
+      ? `https://${domain}/showup/signup/payment?session_id={CHECKOUT_SESSION_ID}`
+      : undefined);
+  if (!successUrl) {
+    throw new Error(
+      "No success URL. Set SHOWUP_SUCCESS_URL or ensure REPLIT_DOMAINS is available.",
+    );
+  }
+
+  const results: Array<{ envKey: string; url: string }> = [];
+  for (const plan of PLANS) {
+    const url = await ensurePlan(stripe, plan, successUrl);
+    results.push({ envKey: plan.envKey, url });
   }
 
   console.log("\n=== RESULT ===");
-  console.log(`VITE_SIGNUP_CHECKOUT_URL=${link.url}`);
+  for (const r of results) {
+    console.log(`ENV ${r.envKey}=${r.url}`);
+  }
+  // Starter doubles as the signup checkout link.
+  const starter = results.find((r) => r.envKey === "VITE_CHECKOUT_URL_STARTER");
+  if (starter) console.log(`ENV VITE_SIGNUP_CHECKOUT_URL=${starter.url}`);
 }
 
 main().catch((err) => {

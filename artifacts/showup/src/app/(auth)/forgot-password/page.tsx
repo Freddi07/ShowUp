@@ -17,10 +17,10 @@ export default function ForgotPasswordPage() {
     setLoading(true);
 
     try {
-      await fetch('/api/auth/forgot-password', {
+      await fetch('/api/auth/request-password-reset', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, redirectTo: '/reset-password' }),
       });
     } finally {
       setLoading(false);
