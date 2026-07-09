@@ -6,6 +6,7 @@ import {
   MessageSquareShare, 
   Sparkles, 
   Bell, 
+  CreditCard,
   Settings, 
   LogOut,
   Menu
@@ -25,6 +26,7 @@ const navItems = [
   { href: "/markedsforing", label: "Markedsføring", icon: MessageSquareShare },
   { href: "/ai-chat", label: "AI-assistent", icon: Sparkles },
   { href: "/varsler", label: "Varsler", icon: Bell },
+  { href: "/abonnement", label: "Abonnement", icon: CreditCard },
   { href: "/innstillinger", label: "Innstillinger", icon: Settings },
 ];
 

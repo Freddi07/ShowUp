@@ -31,9 +31,14 @@ export async function initStripe(): Promise<void> {
       logger.warn("[stripe] REPLIT_DOMAINS missing; skipping managed webhook");
     }
 
-    // Backfill in the background so startup is not blocked.
-    stripeSync
-      .syncBackfill()
+    // Backfill in the background so startup is not blocked. syncBackfill() does
+    // not pull the product catalog, so sync products + prices explicitly too —
+    // the frontend/checkout resolves plans from the synced stripe schema.
+    (async () => {
+      await stripeSync.syncBackfill();
+      await stripeSync.syncProducts();
+      await stripeSync.syncPrices();
+    })()
       .then(() => logger.info("[stripe] data backfill complete"))
       .catch((err) => logger.error({ err }, "[stripe] data backfill failed"));
   } catch (err) {

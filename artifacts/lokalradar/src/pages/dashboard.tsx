@@ -178,7 +178,7 @@ export default function DashboardPage() {
                 <span className="text-muted-foreground">Konkurrenter</span>
                 <span className="font-medium">{overview?.competitorCount} / {overview?.competitorLimit || '∞'}</span>
               </div>
-              <Link href="/innstillinger">
+              <Link href="/abonnement">
                 <Button variant="outline" size="sm" className="w-full mt-2">Oppgrader plan</Button>
               </Link>
             </CardContent>

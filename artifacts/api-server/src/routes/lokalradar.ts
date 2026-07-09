@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import type Anthropic from "@anthropic-ai/sdk";
+import type Stripe from "stripe";
 import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { db } from "@workspace/db";
 import {
@@ -11,12 +12,20 @@ import {
   lokalGenerationTable,
   lokalReviewTable,
   lokalSnapshotTable,
+  userProfileTable,
   type LokalAlert,
   type LokalBusiness,
   type LokalCompetitor,
   type LokalGeneration,
   type LokalReview,
 } from "@workspace/db/schema";
+import { getUncachableStripeClient } from "../lib/stripeClient";
+import {
+  getPlanCatalog,
+  resolvePriceIdForTier,
+  resolveStripeSubscription,
+  type LokalTier,
+} from "../lib/lokalradar/billing";
 import { buildChatSystemPrompt } from "../lib/lokalradar/chat";
 import { requireUser } from "../middlewares/require-user";
 import { runScan } from "../lib/lokalradar/scan";
@@ -57,6 +66,40 @@ function planLimits(plan: string) {
   return PLAN_LIMITS[plan] ?? PLAN_LIMITS.gratis;
 }
 
+/** The caller's Stripe customer id (set at checkout), or null. */
+async function getStripeCustomerId(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: userProfileTable.stripeCustomerId })
+    .from(userProfileTable)
+    .where(eq(userProfileTable.userId, userId))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+/**
+ * Reconcile the stored plan with the user's live Stripe subscription. Stripe is
+ * the source of truth; this keeps LokalBusiness.plan (used by the fast
+ * enforcement path) in step with upgrades, downgrades and cancellations made in
+ * Checkout or the billing portal. Fails soft: on any error the stored plan is
+ * kept so plan checks never break because Stripe is momentarily unavailable.
+ */
+async function reconcilePlan(business: LokalBusiness): Promise<LokalBusiness> {
+  try {
+    const customerId = await getStripeCustomerId(business.userId);
+    const sub = await resolveStripeSubscription(customerId);
+    const tier: string = sub?.tier ?? "gratis";
+    if (tier === business.plan) return business;
+    const [updated] = await db
+      .update(lokalBusinessTable)
+      .set({ plan: tier, updatedAt: new Date() })
+      .where(eq(lokalBusinessTable.id, business.id))
+      .returning();
+    return updated ?? { ...business, plan: tier };
+  } catch {
+    return business;
+  }
+}
+
 /** Get the caller's business row, creating an empty one on first access. */
 async function getOrCreateBusiness(userId: string): Promise<LokalBusiness> {
   const [existing] = await db
@@ -64,20 +107,20 @@ async function getOrCreateBusiness(userId: string): Promise<LokalBusiness> {
     .from(lokalBusinessTable)
     .where(eq(lokalBusinessTable.userId, userId))
     .limit(1);
-  if (existing) return existing;
+  if (existing) return reconcilePlan(existing);
   const [created] = await db
     .insert(lokalBusinessTable)
     .values({ userId })
     .onConflictDoNothing({ target: lokalBusinessTable.userId })
     .returning();
-  if (created) return created;
+  if (created) return reconcilePlan(created);
   // Lost a race with a concurrent insert — read the winner.
   const [row] = await db
     .select()
     .from(lokalBusinessTable)
     .where(eq(lokalBusinessTable.userId, userId))
     .limit(1);
-  return row;
+  return reconcilePlan(row);
 }
 
 function serializeBusiness(b: LokalBusiness) {
@@ -1284,6 +1327,259 @@ router.post("/chat", async (req, res) => {
     } else {
       res.status(500).json({ error: "Rådgiveren er utilgjengelig akkurat nå." });
     }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Billing (Stripe) — real Checkout Sessions + customer portal.
+// Free "gratis" plan needs no Stripe. Pro/Bedrift are real subscriptions;
+// invoices, payment method, cancel and downgrade are handled by Stripe's
+// billing portal. Plan state is read from the synced stripe schema.
+// ---------------------------------------------------------------------------
+
+/** Absolute URL to a page in the LokalRadar web app. */
+function lokalradarUrl(path: string): string {
+  const domain = process.env.REPLIT_DOMAINS?.split(",")[0];
+  const base = domain ? `https://${domain}` : "";
+  return `${base}/lokalradar${path}`;
+}
+
+const PAID_TIERS: readonly LokalTier[] = ["pro", "bedrift"];
+
+/** GET /lokalradar/billing/summary — current plan, usage and plan catalog. */
+router.get("/billing/summary", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const business = await getOrCreateBusiness(userId);
+    const limits = planLimits(business.plan);
+
+    const startOfMonth = new Date();
+    startOfMonth.setUTCDate(1);
+    startOfMonth.setUTCHours(0, 0, 0, 0);
+
+    const customerId = await getStripeCustomerId(userId);
+    const [sub, catalog, [{ count: competitorCount }], [{ count: generationCount }]] =
+      await Promise.all([
+        resolveStripeSubscription(customerId),
+        getPlanCatalog(),
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(lokalCompetitorTable)
+          .where(eq(lokalCompetitorTable.userId, userId)),
+        db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(lokalGenerationTable)
+          .where(
+            and(
+              eq(lokalGenerationTable.userId, userId),
+              gte(lokalGenerationTable.createdAt, startOfMonth),
+            ),
+          ),
+      ]);
+
+    res.json({
+      plan: business.plan,
+      status: sub?.status ?? (business.plan === "gratis" ? "gratis" : "active"),
+      currentPeriodEnd: sub?.currentPeriodEnd ?? null,
+      cancelAtPeriodEnd: sub?.cancelAtPeriodEnd ?? false,
+      trialEnd: sub?.trialEnd ?? null,
+      hasSubscription: sub !== null,
+      canManageBilling: customerId !== null,
+      usage: {
+        competitorCount,
+        competitorLimit: limits.competitors,
+        generationCount,
+        generationLimit: limits.generations,
+      },
+      catalog: catalog.map((p) => ({
+        tier: p.tier,
+        amount: p.amount,
+        currency: p.currency,
+      })),
+    });
+  } catch (err) {
+    console.error("[lokalradar] billing summary error:", err);
+    res.status(500).json({ error: "Kunne ikke hente abonnementsinformasjon" });
+  }
+});
+
+/** POST /lokalradar/billing/checkout — start a Checkout Session for a paid tier. */
+router.post("/billing/checkout", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const email = req.user!.email;
+    const tier = (req.body?.tier ?? "") as LokalTier;
+    if (!PAID_TIERS.includes(tier)) {
+      return res.status(400).json({ error: "Ugyldig plan" });
+    }
+
+    const priceId = await resolvePriceIdForTier(tier);
+    if (!priceId) {
+      return res
+        .status(503)
+        .json({ error: "Betalingsplanen er ikke tilgjengelig ennå" });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const existingCustomerId = await getStripeCustomerId(userId);
+
+    // Already subscribed to a paid LokalRadar plan → switch the plan in place
+    // (proration) instead of creating a second subscription. We check LIVE
+    // Stripe state (not the eventually-consistent synced schema) so the
+    // webhook sync window can never cause a duplicate subscription.
+    if (existingCustomerId) {
+      const live = await stripe.subscriptions.list({
+        customer: existingCustomerId,
+        status: "all",
+        limit: 100,
+      });
+      const activeSub = live.data.find(
+        (s) =>
+          s.metadata?.app === "lokalradar" &&
+          ["active", "trialing", "past_due"].includes(s.status),
+      );
+      if (activeSub) {
+        const item = activeSub.items.data[0];
+        if (!item) {
+          return res
+            .status(409)
+            .json({ error: "Fant ikke abonnementslinjen å oppdatere" });
+        }
+        if (item.price.id === priceId) {
+          return res.json({ updated: false, alreadyOnPlan: true, plan: tier });
+        }
+        await stripe.subscriptions.update(activeSub.id, {
+          items: [{ id: item.id, price: priceId }],
+          proration_behavior: "create_prorations",
+          // A plan switch ends the trial and starts billing the new plan.
+          trial_end: "now",
+        });
+        // Optimistically reflect the new tier so the response + fast enforcement
+        // path are correct immediately, before the webhook syncs the change.
+        await db
+          .update(lokalBusinessTable)
+          .set({ plan: tier, updatedAt: new Date() })
+          .where(eq(lokalBusinessTable.userId, userId));
+        return res.json({ updated: true, plan: tier });
+      }
+    }
+
+    // 14-day free trial on Pro (per plan config); Bedrift is billed immediately.
+    const subscriptionData: Stripe.Checkout.SessionCreateParams.SubscriptionData =
+      { metadata: { app: "lokalradar", userId, tier } };
+    if (tier === "pro") subscriptionData.trial_period_days = 14;
+
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: userId,
+      ...(existingCustomerId
+        ? { customer: existingCustomerId }
+        : { customer_email: email }),
+      subscription_data: subscriptionData,
+      metadata: { app: "lokalradar", userId, tier },
+      allow_promotion_codes: true,
+      success_url: lokalradarUrl(
+        "/abonnement?checkout=success&session_id={CHECKOUT_SESSION_ID}",
+      ),
+      cancel_url: lokalradarUrl("/abonnement?checkout=cancelled"),
+    });
+
+    if (!session.url) {
+      return res.status(502).json({ error: "Kunne ikke starte betaling" });
+    }
+    return res.json({ url: session.url });
+  } catch (err) {
+    console.error("[lokalradar] billing checkout error:", err);
+    return res.status(500).json({ error: "Kunne ikke starte betaling" });
+  }
+});
+
+/** POST /lokalradar/billing/portal — open the Stripe billing portal. */
+router.post("/billing/portal", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const customerId = await getStripeCustomerId(userId);
+    if (!customerId) {
+      return res
+        .status(400)
+        .json({ error: "Du har ingen aktivt abonnement å administrere" });
+    }
+    const stripe = await getUncachableStripeClient();
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customerId,
+      return_url: lokalradarUrl("/abonnement"),
+    });
+    return res.json({ url: session.url });
+  } catch (err) {
+    console.error("[lokalradar] billing portal error:", err);
+    return res.status(500).json({ error: "Kunne ikke åpne kundeportalen" });
+  }
+});
+
+/**
+ * POST /lokalradar/billing/verify — confirm a completed Checkout Session and
+ * persist the Stripe customer id immediately (so the billing portal + plan
+ * reconciliation work right after redirect, before webhooks land).
+ */
+router.post("/billing/verify", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const sessionId = (req.body?.sessionId ?? "") as string;
+    if (!sessionId) return res.status(400).json({ error: "sessionId kreves" });
+
+    const stripe = await getUncachableStripeClient();
+    const checkout = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ["subscription"],
+    });
+
+    // Bind the session to the authenticated user.
+    if (checkout.client_reference_id !== userId) {
+      return res.json({ verified: false });
+    }
+
+    const subscription =
+      checkout.subscription && typeof checkout.subscription === "object"
+        ? (checkout.subscription as Stripe.Subscription)
+        : null;
+    const entitled = new Set(["trialing", "active", "past_due"]);
+    const isVerified =
+      checkout.mode === "subscription" &&
+      checkout.status === "complete" &&
+      subscription !== null &&
+      entitled.has(subscription.status);
+    if (!isVerified) return res.json({ verified: false });
+
+    const customerId =
+      typeof checkout.customer === "string"
+        ? checkout.customer
+        : (checkout.customer?.id ?? null);
+
+    // Persist the Stripe customer id on the user profile so portal + reconcile work.
+    if (customerId) {
+      const now = new Date();
+      await db
+        .insert(userProfileTable)
+        .values({
+          userId,
+          stripeCustomerId: customerId,
+          // NOT NULL columns; LokalRadar's trial is owned by Stripe, so these
+          // profile trial fields are unused here — set to now to satisfy schema.
+          trialStartDate: now,
+          trialEndsAt: now,
+        })
+        .onConflictDoUpdate({
+          target: userProfileTable.userId,
+          set: { stripeCustomerId: customerId, updatedAt: now },
+        });
+    }
+
+    // Reconcile the stored LokalRadar plan from the live subscription.
+    const business = await getOrCreateBusiness(userId);
+    return res.json({ verified: true, plan: business.plan });
+  } catch (err) {
+    console.error("[lokalradar] billing verify error:", err);
+    return res.status(500).json({ error: "Kunne ikke bekrefte betaling" });
   }
 });
 

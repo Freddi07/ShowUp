@@ -18,4 +18,5 @@
 - [API client error shape](api-client-error-shape.md) — read backend errors from `err.data.error` (NOT `err.cause.error`) in showup/lokalradar web toasts
 - [LokalRadar marketing media](lokalradar-marketing-media.md) — runtime AI images via OpenAI gpt-image-1 (Anthropic can't do images); Google review import reuses Places API (~5 reviews, needs GOOGLE_PLACES_API_KEY)
 - [LokalRadar PWA + AI advisor chat](lokalradar-pwa-and-chat.md) — Vite sub-path: manifest/icons root-relative in HTML but SW register uses BASE_URL; streaming advisor chat + prune history; refetchInterval live alerts
+- [LokalRadar Stripe billing](lokalradar-billing.md) — Pro/Bedrift subs via metadata-tag catalog; syncBackfill skips products (call syncProducts/syncPrices); base plan-switch on LIVE Stripe not synced schema
 - [Auto-reminder engine & integrations foundation](showup-reminders-integrations.md) — in-process poller (Reserved VM, not autoscale); REMINDED-only-on-PENDING keeps SMS reply matching; ledger-first ingest dedup; @workspace/db needs `tsc --build` after schema edits; no tsx (esbuild+NODE_ENV=production to run TS)

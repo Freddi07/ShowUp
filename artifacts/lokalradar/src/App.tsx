@@ -15,6 +15,7 @@ import KonkurrentDetaljPage from '@/pages/konkurrent-detalj';
 import MarkedsforingPage from '@/pages/markedsforing';
 import AIChatPage from '@/pages/ai-chat';
 import VarslerPage from '@/pages/varsler';
+import AbonnementPage from '@/pages/abonnement';
 import InnstillingerPage from '@/pages/innstillinger';
 
 import { Shell } from '@/components/shell';
@@ -84,6 +85,13 @@ function AppRoutes() {
         <AuthGuard>
           <Shell>
             <VarslerPage />
+          </Shell>
+        </AuthGuard>
+      </Route>
+      <Route path="/abonnement">
+        <AuthGuard>
+          <Shell>
+            <AbonnementPage />
           </Shell>
         </AuthGuard>
       </Route>
