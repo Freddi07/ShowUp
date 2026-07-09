@@ -143,6 +143,21 @@ export const lokalReviewTable = pgTable(
   (t) => [index("LokalReview_userId_idx").on(t.userId)],
 );
 
+export const lokalChatMessageTable = pgTable(
+  "LokalChatMessage",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId").notNull(),
+    // user | assistant
+    role: text("role").notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("createdAt").notNull().defaultNow(),
+  },
+  (t) => [index("LokalChatMessage_userId_idx").on(t.userId)],
+);
+
 export type LokalBusiness = typeof lokalBusinessTable.$inferSelect;
 export type InsertLokalBusiness = typeof lokalBusinessTable.$inferInsert;
 export type LokalCompetitor = typeof lokalCompetitorTable.$inferSelect;
@@ -152,3 +167,4 @@ export type InsertLokalAlert = typeof lokalAlertTable.$inferInsert;
 export type LokalGeneration = typeof lokalGenerationTable.$inferSelect;
 export type LokalReview = typeof lokalReviewTable.$inferSelect;
 export type LokalSnapshot = typeof lokalSnapshotTable.$inferSelect;
+export type LokalChatMessage = typeof lokalChatMessageTable.$inferSelect;

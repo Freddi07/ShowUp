@@ -23,7 +23,7 @@ function typeLabel(type: string) {
 export default function VarslerPage() {
   const queryClient = useQueryClient();
   const { data, isLoading } = useListLokalAlerts({
-    query: { queryKey: getListLokalAlertsQueryKey() },
+    query: { queryKey: getListLokalAlertsQueryKey(), refetchInterval: 30000 },
   });
   const updateAlert = useUpdateLokalAlert();
 

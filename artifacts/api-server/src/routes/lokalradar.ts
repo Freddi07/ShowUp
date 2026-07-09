@@ -1,9 +1,12 @@
 import { Router } from "express";
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import type Anthropic from "@anthropic-ai/sdk";
+import { anthropic } from "@workspace/integrations-anthropic-ai";
 import { db } from "@workspace/db";
 import {
   lokalAlertTable,
   lokalBusinessTable,
+  lokalChatMessageTable,
   lokalCompetitorTable,
   lokalGenerationTable,
   lokalReviewTable,
@@ -14,6 +17,7 @@ import {
   type LokalGeneration,
   type LokalReview,
 } from "@workspace/db/schema";
+import { buildChatSystemPrompt } from "../lib/lokalradar/chat";
 import { requireUser } from "../middlewares/require-user";
 import { runScan } from "../lib/lokalradar/scan";
 import {
@@ -1126,6 +1130,160 @@ router.post("/reviews/import-google", async (req, res) => {
   } catch (err) {
     console.error("[lokalradar] import google reviews error:", err);
     res.status(500).json({ error: "Kunne ikke importere anmeldelser fra Google" });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// AI advisor chat (streaming). One rolling conversation per user; "reset"
+// clears it. Answers are grounded in the tenant's real data via the system
+// prompt built in ../lib/lokalradar/chat. Uses SSE (not the generated hooks).
+// ---------------------------------------------------------------------------
+const CHAT_MODEL = "claude-sonnet-4-6";
+const CHAT_MAX_TOKENS = 2048;
+const CHAT_HISTORY_LIMIT = 40;
+// Keep the rolling conversation bounded so a single user's history can't grow
+// without limit. Older rows are pruned after each assistant turn.
+const CHAT_RETENTION = 100;
+
+/** GET /lokalradar/chat/messages — the caller's conversation, oldest first. */
+router.get("/chat/messages", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const rows = await db
+      .select({
+        role: lokalChatMessageTable.role,
+        content: lokalChatMessageTable.content,
+        createdAt: lokalChatMessageTable.createdAt,
+      })
+      .from(lokalChatMessageTable)
+      .where(eq(lokalChatMessageTable.userId, userId))
+      .orderBy(asc(lokalChatMessageTable.createdAt));
+    res.json({
+      items: rows.map((r) => ({
+        role: r.role,
+        content: r.content,
+        createdAt: r.createdAt.toISOString(),
+      })),
+    });
+  } catch (err) {
+    console.error("[lokalradar] chat messages error:", err);
+    res.status(500).json({ error: "Kunne ikke hente samtalen" });
+  }
+});
+
+/** POST /lokalradar/chat/reset — clear the caller's conversation. */
+router.post("/chat/reset", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    await db
+      .delete(lokalChatMessageTable)
+      .where(eq(lokalChatMessageTable.userId, userId));
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("[lokalradar] chat reset error:", err);
+    res.status(500).json({ error: "Kunne ikke tilbakestille samtalen" });
+  }
+});
+
+/** POST /lokalradar/chat — stream an advisor reply over SSE. */
+router.post("/chat", async (req, res) => {
+  const userId = req.user!.id;
+  const message =
+    typeof req.body?.message === "string" ? req.body.message.trim() : "";
+  if (!message) {
+    res.status(400).json({ error: "Meldingen kan ikke være tom" });
+    return;
+  }
+
+  try {
+    // Persist the user turn, then load recent history for context.
+    await db
+      .insert(lokalChatMessageTable)
+      .values({ userId, role: "user", content: message });
+    const historyDesc = await db
+      .select({
+        role: lokalChatMessageTable.role,
+        content: lokalChatMessageTable.content,
+      })
+      .from(lokalChatMessageTable)
+      .where(eq(lokalChatMessageTable.userId, userId))
+      .orderBy(desc(lokalChatMessageTable.createdAt))
+      .limit(CHAT_HISTORY_LIMIT);
+    const history = historyDesc.reverse();
+
+    const system = await buildChatSystemPrompt(userId);
+
+    // Switch to SSE.
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders?.();
+
+    const sse = (payload: unknown) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+    sse({ type: "start" });
+
+    const messages: Anthropic.MessageParam[] = history.map((m) => ({
+      role: m.role === "assistant" ? "assistant" : "user",
+      content: m.content,
+    }));
+
+    let aborted = false;
+    const stream = anthropic.messages.stream({
+      model: CHAT_MODEL,
+      max_tokens: CHAT_MAX_TOKENS,
+      system,
+      messages,
+    });
+    req.on("close", () => {
+      aborted = true;
+      stream.abort();
+    });
+
+    let full = "";
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        full += event.delta.text;
+        sse({ type: "text", content: event.delta.text });
+      }
+    }
+    await stream.finalMessage();
+
+    if (!aborted) {
+      if (full.trim()) {
+        await db
+          .insert(lokalChatMessageTable)
+          .values({ userId, role: "assistant", content: full });
+        // Prune to the most recent CHAT_RETENTION messages for this user.
+        await db.execute(sql`
+          DELETE FROM "LokalChatMessage"
+          WHERE "userId" = ${userId}
+            AND "id" NOT IN (
+              SELECT "id" FROM "LokalChatMessage"
+              WHERE "userId" = ${userId}
+              ORDER BY "createdAt" DESC
+              LIMIT ${CHAT_RETENTION}
+            )
+        `);
+      }
+      sse({ type: "done" });
+    }
+    res.end();
+  } catch (err) {
+    console.error("[lokalradar] chat error:", err);
+    if (res.headersSent) {
+      res.write(
+        `data: ${JSON.stringify({ type: "error", error: "Rådgiveren møtte en feil. Prøv igjen." })}\n\n`,
+      );
+      res.end();
+    } else {
+      res.status(500).json({ error: "Rådgiveren er utilgjengelig akkurat nå." });
+    }
   }
 });
 

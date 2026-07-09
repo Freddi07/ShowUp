@@ -1,4 +1,4 @@
-import { useGetLokalOverview, useListLokalAlerts, getListLokalAlertsQueryKey } from "@workspace/api-client-react";
+import { useGetLokalOverview, useListLokalAlerts, getListLokalAlertsQueryKey, getGetLokalOverviewQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Eye, Bell, Sparkles, Star, ArrowRight, Loader2, Info } from "lucide-react";
 import { Link } from "wouter";
@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { formatDateTime } from "@/lib/utils";
 
 export default function DashboardPage() {
-  const { data: overview, isLoading: overviewLoading } = useGetLokalOverview();
+  const { data: overview, isLoading: overviewLoading } = useGetLokalOverview({
+    query: { queryKey: getGetLokalOverviewQueryKey(), refetchInterval: 30000 },
+  });
   const { data: alertsData, isLoading: alertsLoading } = useListLokalAlerts({
     query: {
       queryKey: getListLokalAlertsQueryKey(),
+      refetchInterval: 30000,
     },
   });
 
