@@ -7,7 +7,8 @@ app**:
 - The **frontend** builds to static files (`artifacts/lokalradar/dist/public`)
   and is served by Vercel's CDN.
 - The **backend** (`artifacts/api-server`) runs as a Vercel **serverless
-  function** at `api/index.ts`. All `/api/*` requests are routed to it.
+  function** (the catch-all `api/[...path].mjs`). All `/api/*` requests are
+  routed to it with their full path preserved.
 
 Because both live on the same Vercel domain, session cookies (login) work
 without any cross-origin configuration.
@@ -27,6 +28,8 @@ Preview). Values you already use in Replit can be reused.
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string. Use an externally reachable Postgres (the existing Replit/Neon connection string works if it allows outside connections). **Required.** |
+| `BETTER_AUTH_URL` | The full deployed origin, e.g. `https://your-app.vercel.app`. Used as the auth base URL, OAuth callback base, and a trusted origin. **Required on Vercel** (there is no Replit domain to fall back to). |
+| `APP_URL` | Same value as `BETTER_AUTH_URL` — used to build password-reset and welcome-email links. Set it to your Vercel domain. |
 | `BETTER_AUTH_SECRET` | Auth session signing secret. |
 | `SESSION_SECRET` | Session secret. |
 | `ENCRYPTION_KEY` | Encryption key used by the backend. |
@@ -52,7 +55,7 @@ startup.
 
 Push to the connected branch (or click **Deploy**). Vercel runs
 `pnpm run vercel-build`, which builds the shared libraries and the frontend,
-then bundles the `api/index.ts` function.
+then bundles the `api/[...path].mjs` function.
 
 ## Known limitations on Vercel
 
