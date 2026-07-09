@@ -5,27 +5,16 @@ import { defineConfig } from 'vite';
 
 import runtimeErrorOverlay from '@replit/vite-plugin-runtime-error-modal';
 
+// PORT / BASE_PATH are provided by the Replit environment for the dev/preview
+// server. On other hosts (e.g. a plain `vite build` on Vercel) they may be
+// absent — fall back to sane defaults so the build never fails.
 const rawPort = process.env.PORT;
+const parsedPort = rawPort ? Number(rawPort) : NaN;
+const port = Number.isNaN(parsedPort) || parsedPort <= 0 ? 5173 : parsedPort;
 
-if (!rawPort) {
-  throw new Error(
-    'PORT environment variable is required but was not provided.',
-  );
-}
-
-const port = Number(rawPort);
-
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
-
-const basePath = process.env.BASE_PATH;
-
-if (!basePath) {
-  throw new Error(
-    'BASE_PATH environment variable is required but was not provided.',
-  );
-}
+// Base path the app is served under. Replit serves it at "/lokalradar/"; a
+// standalone deploy (Vercel) serves it at the domain root "/".
+const basePath = process.env.BASE_PATH || '/';
 
 export default defineConfig({
   base: basePath,
