@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { CalendarClock, Link2, Plug, RefreshCw } from 'lucide-react';
+import { BookOpen, CalendarClock, Link2, Plug, RefreshCw, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { WebhookSetupDialog } from './webhook-setup-dialog';
+import { PROVIDER_GUIDES, hasGuide } from './integration-guides';
 
 interface IntegrationItem {
   provider: string;
@@ -57,6 +67,8 @@ function formatDateTime(iso: string | null): string {
 
 export function BookingIntegrations() {
   const queryClient = useQueryClient();
+  const [webhookOpen, setWebhookOpen] = useState(false);
+  const [guideProvider, setGuideProvider] = useState<string | null>(null);
 
   const integrations = useQuery({
     queryKey: ['integrations'],
@@ -72,12 +84,22 @@ export function BookingIntegrations() {
   const connect = useMutation({
     mutationFn: (provider: string) =>
       apiFetch(`/api/integrations/${provider}/connect`, { method: 'POST' }),
-    onSuccess: () => {
+    onSuccess: (_data, provider) => {
       queryClient.invalidateQueries({ queryKey: ['integrations'] });
+      if (provider === 'generic_webhook') {
+        queryClient.invalidateQueries({ queryKey: ['webhook-config', 'generic_webhook'] });
+        setWebhookOpen(true);
+        toast.success('Webhook opprettet', {
+          description: 'Kopier URL og nøkkel inn i systemet ditt.',
+        });
+      } else {
+        toast.success('Tilkoblet');
+      }
     },
-    onError: () => {
-      toast.message('Kommer snart', {
-        description: 'Denne koblingen er ikke tilgjengelig ennå.',
+    onError: (err) => {
+      const cause = (err as { cause?: { error?: string } })?.cause;
+      toast.error('Kunne ikke koble til', {
+        description: cause?.error ?? 'Denne koblingen er ikke tilgjengelig ennå.',
       });
     },
   });
@@ -94,6 +116,8 @@ export function BookingIntegrations() {
 
   const items = integrations.data?.items ?? [];
   const bookingItems = bookings.data?.items ?? [];
+  const activeGuide = guideProvider ? PROVIDER_GUIDES[guideProvider] : null;
+  const activeGuideLabel = items.find((i) => i.provider === guideProvider)?.label ?? '';
 
   return (
     <Card>
@@ -115,6 +139,8 @@ export function BookingIntegrations() {
             {items.map((item) => {
               const status = STATUS_META[item.status];
               const isConnected = item.status !== 'disconnected';
+              const isWebhook = item.provider === 'generic_webhook';
+              const providerHasGuide = hasGuide(item.provider);
               return (
                 <div
                   key={item.provider}
@@ -135,8 +161,29 @@ export function BookingIntegrations() {
                       </p>
                     ) : null}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {isConnected ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    {isWebhook && isConnected ? (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setWebhookOpen(true)}
+                        >
+                          <Settings2 className="size-4" />
+                          Webhook-oppsett
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={disconnect.isPending}
+                          onClick={() => disconnect.mutate(item.provider)}
+                        >
+                          Koble fra
+                        </Button>
+                      </>
+                    ) : isConnected ? (
                       <Button
                         type="button"
                         variant="outline"
@@ -155,6 +202,16 @@ export function BookingIntegrations() {
                       >
                         <Link2 className="size-4" />
                         Koble til
+                      </Button>
+                    ) : providerHasGuide ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        onClick={() => setGuideProvider(item.provider)}
+                      >
+                        <BookOpen className="size-4" />
+                        Vis oppsett
                       </Button>
                     ) : (
                       <Button type="button" size="sm" variant="secondary" disabled>
@@ -211,6 +268,53 @@ export function BookingIntegrations() {
           )}
         </div>
       </CardContent>
+
+      <WebhookSetupDialog open={webhookOpen} onOpenChange={setWebhookOpen} />
+
+      <Dialog
+        open={guideProvider !== null}
+        onOpenChange={(open) => !open && setGuideProvider(null)}
+      >
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="size-5 text-brand-500" />
+              {activeGuideLabel} — oppsett
+            </DialogTitle>
+            {activeGuide ? (
+              <DialogDescription>{activeGuide.intro}</DialogDescription>
+            ) : null}
+          </DialogHeader>
+          {activeGuide ? (
+            <ol className="list-decimal space-y-2 pl-5 text-sm">
+              {activeGuide.steps.map((step, i) => (
+                <li key={i} className="text-foreground">
+                  {step}
+                </li>
+              ))}
+            </ol>
+          ) : null}
+          {activeGuide?.usesGenericWebhook ? (
+            <Button
+              type="button"
+              size="sm"
+              className="self-start"
+              onClick={() => {
+                setGuideProvider(null);
+                const webhook = items.find((i) => i.provider === 'generic_webhook');
+                if (webhook && webhook.status !== 'disconnected') {
+                  setWebhookOpen(true);
+                } else {
+                  connect.mutate('generic_webhook');
+                }
+              }}
+            >
+              <Link2 className="size-4" />
+              Sett opp generisk webhook
+            </Button>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

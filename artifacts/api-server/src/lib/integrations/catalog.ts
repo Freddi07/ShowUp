@@ -36,7 +36,7 @@ export const PROVIDER_CATALOG: CatalogEntry[] = [
       "Ta imot bookinger fra et hvilket som helst system som kan sende utgående webhooks.",
     category: "webhook",
     authType: "webhook",
-    implemented: false,
+    implemented: true,
   },
   {
     provider: "google_calendar",

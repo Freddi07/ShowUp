@@ -9,10 +9,20 @@ import {
   getProvider,
   isProviderImplemented,
 } from "../lib/integrations/registry";
-import { decryptJSON } from "../lib/integrations/crypto";
+import {
+  decryptJSON,
+  encryptJSON,
+  isEncryptionConfigured,
+} from "../lib/integrations/crypto";
+import { generateWebhookSecret } from "../lib/integrations/providers/generic-webhook";
 
 const router = Router();
 router.use(requireUser);
+
+/** Build the public inbound-webhook URL for an integration from the request. */
+function buildWebhookUrl(req: { protocol: string; get(h: string): string | undefined }, integrationId: string): string {
+  return `${req.protocol}://${req.get("host")}/api/integrations/webhook/${integrationId}`;
+}
 
 /** GET /integrations — the provider catalogue merged with the user's status. */
 router.get("/", async (req, res) => {
@@ -94,18 +104,162 @@ router.get("/bookings", async (req, res) => {
  */
 router.post("/:provider/connect", async (req, res) => {
   const provider = req.params.provider;
-  if (!getCatalogEntry(provider)) {
-    res.status(404).json({ error: "Ukjent leverandør" });
-    return;
+  try {
+    const userId = req.user!.id;
+    if (!getCatalogEntry(provider)) {
+      res.status(404).json({ error: "Ukjent leverandør" });
+      return;
+    }
+    if (!isProviderImplemented(provider)) {
+      res.status(501).json({
+        error: "Denne koblingen er ikke tilgjengelig ennå.",
+        code: "not_implemented",
+      });
+      return;
+    }
+    if (!isEncryptionConfigured()) {
+      res.status(503).json({
+        error:
+          "Kryptering er ikke konfigurert (ENCRYPTION_KEY mangler). Kontakt administrator.",
+        code: "encryption_not_configured",
+      });
+      return;
+    }
+
+    // The provider mints whatever must be persisted (e.g. a webhook secret).
+    const result = await getProvider(provider, {
+      userId,
+      integrationId: "",
+      credentials: {},
+    }).connect(req.body);
+    const encrypted = encryptJSON(result.credentials);
+
+    const [row] = await db
+      .insert(integrationTable)
+      .values({
+        userId,
+        provider: provider as never,
+        status: "connected",
+        credentialsEncrypted: encrypted,
+        externalAccountId: result.externalAccountId ?? null,
+        lastError: null,
+      })
+      .onConflictDoUpdate({
+        target: [integrationTable.userId, integrationTable.provider],
+        set: {
+          status: "connected",
+          credentialsEncrypted: encrypted,
+          externalAccountId: result.externalAccountId ?? null,
+          lastError: null,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+
+    if (provider === "generic_webhook") {
+      res.json({
+        ok: true,
+        provider,
+        webhookUrl: buildWebhookUrl(req, row.id),
+        secret: (result.credentials as { secret?: string }).secret ?? null,
+      });
+      return;
+    }
+    res.json({ ok: true, provider });
+  } catch (err) {
+    if (err instanceof ProviderNotImplementedError) {
+      res.status(501).json({ error: "Not implemented", code: "not_implemented" });
+      return;
+    }
+    console.error("[integrations] connect error:", err);
+    res.status(500).json({ error: "Kunne ikke koble til" });
   }
-  if (!isProviderImplemented(provider)) {
-    res.status(501).json({
-      error: "Denne koblingen er ikke tilgjengelig ennå.",
-      code: "not_implemented",
+});
+
+/**
+ * GET /integrations/:provider/webhook-config — current webhook URL + secret for
+ * a connected generic webhook, so the dashboard can show them after a reload.
+ */
+router.get("/:provider/webhook-config", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const provider = req.params.provider;
+    if (provider !== "generic_webhook") {
+      res.status(404).json({ error: "Ukjent leverandør" });
+      return;
+    }
+    const [row] = await db
+      .select()
+      .from(integrationTable)
+      .where(
+        and(
+          eq(integrationTable.userId, userId),
+          eq(integrationTable.provider, provider),
+        ),
+      )
+      .limit(1);
+    if (!row || row.status !== "connected") {
+      res.json({ connected: false });
+      return;
+    }
+    const creds = row.credentialsEncrypted
+      ? decryptJSON<{ secret?: string }>(row.credentialsEncrypted)
+      : {};
+    res.json({
+      connected: true,
+      webhookUrl: buildWebhookUrl(req, row.id),
+      secret: creds.secret ?? null,
     });
-    return;
+  } catch (err) {
+    console.error("[integrations] webhook-config error:", err);
+    res.status(500).json({ error: "Kunne ikke hente webhook-oppsett" });
   }
-  res.status(501).json({ error: "Not implemented", code: "not_implemented" });
+});
+
+/**
+ * POST /integrations/:provider/regenerate-secret — mint a fresh signing secret
+ * (invalidates the previous one) for a connected generic webhook.
+ */
+router.post("/:provider/regenerate-secret", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const provider = req.params.provider;
+    if (provider !== "generic_webhook") {
+      res.status(404).json({ error: "Ukjent leverandør" });
+      return;
+    }
+    if (!isEncryptionConfigured()) {
+      res.status(503).json({
+        error:
+          "Kryptering er ikke konfigurert (ENCRYPTION_KEY mangler). Kontakt administrator.",
+        code: "encryption_not_configured",
+      });
+      return;
+    }
+    const [row] = await db
+      .select()
+      .from(integrationTable)
+      .where(
+        and(
+          eq(integrationTable.userId, userId),
+          eq(integrationTable.provider, provider),
+        ),
+      )
+      .limit(1);
+    if (!row || row.status !== "connected") {
+      res.status(404).json({ error: "Webhooken er ikke tilkoblet" });
+      return;
+    }
+    const secret = generateWebhookSecret();
+    await db
+      .update(integrationTable)
+      .set({ credentialsEncrypted: encryptJSON({ secret }), updatedAt: new Date() })
+      .where(eq(integrationTable.id, row.id));
+    res.json({ secret, webhookUrl: buildWebhookUrl(req, row.id) });
+  } catch (err) {
+    console.error("[integrations] regenerate-secret error:", err);
+    res.status(500).json({ error: "Kunne ikke lage ny nøkkel" });
+  }
 });
 
 /**
