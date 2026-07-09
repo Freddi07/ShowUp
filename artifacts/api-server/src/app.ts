@@ -4,7 +4,6 @@ import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { WebhookHandlers } from "./lib/webhookHandlers";
-import { handleIntegrationWebhook } from "./lib/integrations/webhook-endpoint";
 
 const app: Express = express();
 
@@ -50,14 +49,6 @@ app.post(
       return res.status(400).json({ error: "Webhook processing error" });
     }
   },
-);
-
-// Inbound booking webhooks MUST receive the raw body so we can verify the HMAC
-// signature over the exact bytes. Register BEFORE express.json(), like Stripe.
-app.post(
-  "/api/integrations/webhook/:integrationId",
-  express.raw({ type: "*/*" }),
-  handleIntegrationWebhook,
 );
 
 app.use(express.json());
