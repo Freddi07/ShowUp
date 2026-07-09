@@ -43,7 +43,16 @@ import type {
   LokalCompetitorList,
   LokalGenerationList,
   LokalOverview,
+  LokalPostInput,
+  LokalPostResult,
+  LokalReview,
+  LokalReviewInput,
+  LokalReviewList,
+  LokalReviewReplyInput,
+  LokalReviewReplyResult,
   LokalScanResult,
+  LokalSeoInput,
+  LokalSeoResult,
   Me,
   NotificationSettings,
   NotificationSettingsUpdate,
@@ -2254,5 +2263,362 @@ export const useScanLokalCompetitor = <TError = ErrorType<UnauthorizedResponse |
         TContext
       > => {
       return useMutation(getScanLokalCompetitorMutationOptions(options));
+    }
+
+export const getGenerateLokalPostsUrl = () => {
+
+
+
+
+  return `/api/lokalradar/generate/posts`
+}
+
+/**
+ * @summary Generate ready-to-post marketing drafts
+ */
+export const generateLokalPosts = async (lokalPostInput: LokalPostInput, options?: RequestInit): Promise<LokalPostResult> => {
+
+  return customFetch<LokalPostResult>(getGenerateLokalPostsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lokalPostInput)
+  }
+);}
+
+
+
+
+export const getGenerateLokalPostsMutationOptions = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalPosts>>, TError,{data: BodyType<LokalPostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateLokalPosts>>, TError,{data: BodyType<LokalPostInput>}, TContext> => {
+
+const mutationKey = ['generateLokalPosts'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateLokalPosts>>, {data: BodyType<LokalPostInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateLokalPosts(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateLokalPostsMutationResult = NonNullable<Awaited<ReturnType<typeof generateLokalPosts>>>
+    export type GenerateLokalPostsMutationBody = BodyType<LokalPostInput>
+    export type GenerateLokalPostsMutationError = ErrorType<UnauthorizedResponse | ErrorResponse>
+
+    /**
+ * @summary Generate ready-to-post marketing drafts
+ */
+export const useGenerateLokalPosts = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalPosts>>, TError,{data: BodyType<LokalPostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateLokalPosts>>,
+        TError,
+        {data: BodyType<LokalPostInput>},
+        TContext
+      > => {
+      return useMutation(getGenerateLokalPostsMutationOptions(options));
+    }
+
+export const getListLokalReviewsUrl = () => {
+
+
+
+
+  return `/api/lokalradar/reviews`
+}
+
+/**
+ * @summary List reviews available to the reply assistant
+ */
+export const listLokalReviews = async ( options?: RequestInit): Promise<LokalReviewList> => {
+
+  return customFetch<LokalReviewList>(getListLokalReviewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListLokalReviewsQueryKey = () => {
+    return [
+    `/api/lokalradar/reviews`
+    ] as const;
+    }
+
+
+export const getListLokalReviewsQueryOptions = <TData = Awaited<ReturnType<typeof listLokalReviews>>, TError = ErrorType<UnauthorizedResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLokalReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListLokalReviewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listLokalReviews>>> = ({ signal }) => listLokalReviews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listLokalReviews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListLokalReviewsQueryResult = NonNullable<Awaited<ReturnType<typeof listLokalReviews>>>
+export type ListLokalReviewsQueryError = ErrorType<UnauthorizedResponse>
+
+
+/**
+ * @summary List reviews available to the reply assistant
+ */
+
+export function useListLokalReviews<TData = Awaited<ReturnType<typeof listLokalReviews>>, TError = ErrorType<UnauthorizedResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listLokalReviews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListLokalReviewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateLokalReviewUrl = () => {
+
+
+
+
+  return `/api/lokalradar/reviews`
+}
+
+/**
+ * @summary Manually add a review to reply to
+ */
+export const createLokalReview = async (lokalReviewInput: LokalReviewInput, options?: RequestInit): Promise<LokalReview> => {
+
+  return customFetch<LokalReview>(getCreateLokalReviewUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lokalReviewInput)
+  }
+);}
+
+
+
+
+export const getCreateLokalReviewMutationOptions = <TError = ErrorType<UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLokalReview>>, TError,{data: BodyType<LokalReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createLokalReview>>, TError,{data: BodyType<LokalReviewInput>}, TContext> => {
+
+const mutationKey = ['createLokalReview'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createLokalReview>>, {data: BodyType<LokalReviewInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createLokalReview(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateLokalReviewMutationResult = NonNullable<Awaited<ReturnType<typeof createLokalReview>>>
+    export type CreateLokalReviewMutationBody = BodyType<LokalReviewInput>
+    export type CreateLokalReviewMutationError = ErrorType<UnauthorizedResponse>
+
+    /**
+ * @summary Manually add a review to reply to
+ */
+export const useCreateLokalReview = <TError = ErrorType<UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createLokalReview>>, TError,{data: BodyType<LokalReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createLokalReview>>,
+        TError,
+        {data: BodyType<LokalReviewInput>},
+        TContext
+      > => {
+      return useMutation(getCreateLokalReviewMutationOptions(options));
+    }
+
+export const getGenerateLokalReviewReplyUrl = () => {
+
+
+
+
+  return `/api/lokalradar/generate/review-reply`
+}
+
+/**
+ * @summary Suggest a professional reply to a review
+ */
+export const generateLokalReviewReply = async (lokalReviewReplyInput: LokalReviewReplyInput, options?: RequestInit): Promise<LokalReviewReplyResult> => {
+
+  return customFetch<LokalReviewReplyResult>(getGenerateLokalReviewReplyUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lokalReviewReplyInput)
+  }
+);}
+
+
+
+
+export const getGenerateLokalReviewReplyMutationOptions = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalReviewReply>>, TError,{data: BodyType<LokalReviewReplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateLokalReviewReply>>, TError,{data: BodyType<LokalReviewReplyInput>}, TContext> => {
+
+const mutationKey = ['generateLokalReviewReply'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateLokalReviewReply>>, {data: BodyType<LokalReviewReplyInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateLokalReviewReply(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateLokalReviewReplyMutationResult = NonNullable<Awaited<ReturnType<typeof generateLokalReviewReply>>>
+    export type GenerateLokalReviewReplyMutationBody = BodyType<LokalReviewReplyInput>
+    export type GenerateLokalReviewReplyMutationError = ErrorType<UnauthorizedResponse | ErrorResponse>
+
+    /**
+ * @summary Suggest a professional reply to a review
+ */
+export const useGenerateLokalReviewReply = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalReviewReply>>, TError,{data: BodyType<LokalReviewReplyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateLokalReviewReply>>,
+        TError,
+        {data: BodyType<LokalReviewReplyInput>},
+        TContext
+      > => {
+      return useMutation(getGenerateLokalReviewReplyMutationOptions(options));
+    }
+
+export const getGenerateLokalSeoUrl = () => {
+
+
+
+
+  return `/api/lokalradar/generate/seo`
+}
+
+/**
+ * @summary Generate SEO/website suggestions for the user's site
+ */
+export const generateLokalSeo = async (lokalSeoInput: LokalSeoInput, options?: RequestInit): Promise<LokalSeoResult> => {
+
+  return customFetch<LokalSeoResult>(getGenerateLokalSeoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lokalSeoInput)
+  }
+);}
+
+
+
+
+export const getGenerateLokalSeoMutationOptions = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalSeo>>, TError,{data: BodyType<LokalSeoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateLokalSeo>>, TError,{data: BodyType<LokalSeoInput>}, TContext> => {
+
+const mutationKey = ['generateLokalSeo'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateLokalSeo>>, {data: BodyType<LokalSeoInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateLokalSeo(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateLokalSeoMutationResult = NonNullable<Awaited<ReturnType<typeof generateLokalSeo>>>
+    export type GenerateLokalSeoMutationBody = BodyType<LokalSeoInput>
+    export type GenerateLokalSeoMutationError = ErrorType<UnauthorizedResponse | ErrorResponse>
+
+    /**
+ * @summary Generate SEO/website suggestions for the user's site
+ */
+export const useGenerateLokalSeo = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalSeo>>, TError,{data: BodyType<LokalSeoInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateLokalSeo>>,
+        TError,
+        {data: BodyType<LokalSeoInput>},
+        TContext
+      > => {
+      return useMutation(getGenerateLokalSeoMutationOptions(options));
     }
 

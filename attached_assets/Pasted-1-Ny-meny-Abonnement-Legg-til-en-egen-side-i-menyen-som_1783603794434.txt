@@ -1,0 +1,119 @@
+1. Ny meny: Abonnement
+
+Legg til en egen side i menyen som heter "Abonnement".
+
+Denne siden skal inneholde:
+
+Nåværende abonnement (Gratis, Pro, Business osv.)
+Status på abonnement (Aktivt, Prøveperiode, Utløpt)
+Neste betalingsdato
+Fakturahistorikk
+Betalingsmetode
+Knapp for å oppgradere abonnement
+Knapp for å nedgradere abonnement
+Knapp for å avslutte abonnement
+Sammenligning av tilgjengelige abonnementer
+Oversikt over hvilke funksjoner som er inkludert i hver plan
+2. Dashboard
+
+Dashboardet skal gi en rask oversikt over:
+
+Totalt antall visninger
+Totalt antall klikk
+Google-anmeldelser
+Gjennomsnittlig vurdering
+SEO-score
+Konkurrentoversikt
+AI-anbefalinger
+Siste aktivitet
+Varsler
+
+Vis dette med moderne kort (cards) og grafer.
+
+3. Bedriftsprofil
+
+Utvid innstillingssiden med:
+
+Bedriftslogo
+Forsidebilde
+Telefonnummer
+E-post
+Adresse
+Kartvisning
+Åpningstider
+Beskrivelse av bedriften
+Bilder/Galleri
+Sosiale medier
+4. Konkurrentanalyse
+
+Legg til mer informasjon om konkurrenter:
+
+SEO-score
+Google-rating
+Antall anmeldelser
+Endringer siden forrige uke
+Sammenligning mot egen bedrift
+5. AI-assistent
+
+AI-assistenten skal kunne:
+
+Lage SEO-forslag
+Skrive blogginnlegg
+Skrive Google Business-innlegg
+Analysere konkurrenter
+Analysere nettsiden
+Gi forslag til forbedringer
+6. Varsler
+
+Varsler skal kun støtte:
+
+Nye Google-anmeldelser
+Dårlige anmeldelser
+SEO-endringer
+Konkurrentendringer
+Systemoppdateringer
+
+Ikke implementer SMS-varsler eller SMS-funksjoner ennå. Kun varsler i systemet og via e-post dersom det legges til senere.
+
+7. Rapporter
+
+Lag en rapport-side med:
+
+PDF-eksport
+CSV-eksport
+Valg av tidsperiode
+Grafer
+Historikk
+8. Integrasjoner
+
+Legg til støtte for:
+
+Google Business Profile
+Google Analytics
+Google Search Console
+Stripe (betaling av abonnement)
+
+Ikke legg til Facebook, Instagram eller SMS-integrasjoner enda.
+
+9. Brukergrensesnitt
+
+Forbedre designet:
+
+Mer moderne dashboard
+Flere statistikkort
+Bedre ikoner
+Bedre spacing
+Responsivt design
+Mørk modus
+Prioritet
+
+Implementer funksjonene i denne rekkefølgen:
+
+Abonnement-side med oppgradering av betalingsplan.
+Dashboard med statistikk og oversikt.
+Utvidet bedriftsprofil.
+Konkurrentanalyse.
+AI-assistent.
+Rapporter.
+Integrasjoner.
+Designforbedringer.

@@ -11,10 +11,18 @@ import {
   type LokalAlert,
   type LokalBusiness,
   type LokalCompetitor,
+  type LokalGeneration,
+  type LokalReview,
 } from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
 import { runScan } from "../lib/lokalradar/scan";
 import { extractPlaceId } from "../lib/lokalradar/google-places";
+import { fetchVisibleText } from "../lib/lokalradar/web-scrape";
+import {
+  generatePosts,
+  generateReviewReply,
+  analyzeSeo,
+} from "../lib/lokalradar/marketing";
 import type {
   LokalReviewData,
   LokalWebData,
@@ -622,6 +630,344 @@ router.get("/generations", async (req, res) => {
   } catch (err) {
     console.error("[lokalradar] list generations error:", err);
     res.status(500).json({ error: "Kunne ikke hente innhold" });
+  }
+});
+
+// --- Marketing assistant ---------------------------------------------------
+
+function startOfMonthUTC(): Date {
+  const d = new Date();
+  d.setUTCDate(1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d;
+}
+
+async function generationsUsedThisMonth(userId: string): Promise<number> {
+  const [{ count }] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(lokalGenerationTable)
+    .where(
+      and(
+        eq(lokalGenerationTable.userId, userId),
+        gte(lokalGenerationTable.createdAt, startOfMonthUTC()),
+      ),
+    );
+  return count;
+}
+
+function generationLimitMessage(limit: number): string {
+  return `Du har brukt opp de ${limit} AI-genereringene som inngår i planen din denne måneden. Oppgrader for å lage mer innhold.`;
+}
+
+function serializeGeneration(g: LokalGeneration) {
+  return {
+    id: g.id,
+    kind: g.kind,
+    channel: g.channel ?? null,
+    prompt: g.prompt ?? null,
+    content: g.content,
+    createdAt: g.createdAt.toISOString(),
+  };
+}
+
+function serializeReview(r: LokalReview) {
+  return {
+    id: r.id,
+    competitorId: r.competitorId ?? null,
+    source: r.source ?? null,
+    author: r.author ?? null,
+    rating: r.rating ?? null,
+    text: r.text ?? null,
+    reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : null,
+    createdAt: r.createdAt.toISOString(),
+  };
+}
+
+/**
+ * Persist a generation while atomically enforcing the monthly plan cap. A
+ * per-user advisory lock serialises concurrent generations so racing requests
+ * cannot exceed the limit. Returns "limit" when the cap is reached.
+ */
+async function logGenerationWithLimit(
+  userId: string,
+  limit: number | null,
+  row: { kind: string; channel: string | null; prompt: string | null; content: string },
+): Promise<LokalGeneration | "limit"> {
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${userId}))`);
+    if (limit !== null) {
+      const [{ count }] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(lokalGenerationTable)
+        .where(
+          and(
+            eq(lokalGenerationTable.userId, userId),
+            gte(lokalGenerationTable.createdAt, startOfMonthUTC()),
+          ),
+        );
+      if (count >= limit) return "limit";
+    }
+    const [inserted] = await tx
+      .insert(lokalGenerationTable)
+      .values({ userId, ...row })
+      .returning();
+    return inserted;
+  });
+}
+
+/** POST /lokalradar/generate/posts — generate ready-to-post marketing drafts. */
+router.post("/generate/posts", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const typeError = validateBody(
+      req.body ?? {},
+      ["channel", "industry", "season", "tone", "keywords"],
+      [],
+    );
+    if (typeError) {
+      res.status(400).json({ error: typeError });
+      return;
+    }
+    const channel = (cleanStr(req.body?.channel) ?? "facebook").toLowerCase();
+    if (!["google", "facebook", "instagram"].includes(channel)) {
+      res.status(400).json({ error: "Ugyldig kanal" });
+      return;
+    }
+
+    const business = await getOrCreateBusiness(userId);
+    const limit = planLimits(business.plan).generations;
+    if (limit !== null && (await generationsUsedThisMonth(userId)) >= limit) {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit), code: "generation_limit" });
+      return;
+    }
+
+    const industry = cleanStr(req.body?.industry) ?? business.industry ?? null;
+    const season = cleanStr(req.body?.season) ?? null;
+    const tone = cleanStr(req.body?.tone) ?? null;
+    const keywords = cleanStr(req.body?.keywords) ?? null;
+
+    const posts = await generatePosts(
+      { name: business.name, industry, location: business.location },
+      { channel, industry, season, tone, keywords },
+    );
+    if (posts.length === 0) {
+      res
+        .status(502)
+        .json({ error: "AI-en klarte ikke å lage innlegg akkurat nå. Prøv igjen." });
+      return;
+    }
+
+    const promptSummary =
+      [industry, season, tone, keywords].filter(Boolean).join(" · ") || null;
+    const logged = await logGenerationWithLimit(userId, limit, {
+      kind: channel === "google" ? "google_post" : "social_post",
+      channel,
+      prompt: promptSummary,
+      content: posts.join("\n\n---\n\n"),
+    });
+    if (logged === "limit") {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit!), code: "generation_limit" });
+      return;
+    }
+
+    res.json({ posts, generation: serializeGeneration(logged) });
+  } catch (err) {
+    console.error("[lokalradar] generate posts error:", err);
+    res.status(500).json({ error: "Kunne ikke lage innlegg" });
+  }
+});
+
+/** GET /lokalradar/reviews — reviews available to the review-reply assistant. */
+router.get("/reviews", async (req, res) => {
+  try {
+    const rows = await db
+      .select()
+      .from(lokalReviewTable)
+      .where(eq(lokalReviewTable.userId, req.user!.id))
+      .orderBy(desc(lokalReviewTable.createdAt));
+    res.json({ items: rows.map(serializeReview) });
+  } catch (err) {
+    console.error("[lokalradar] list reviews error:", err);
+    res.status(500).json({ error: "Kunne ikke hente anmeldelser" });
+  }
+});
+
+/** POST /lokalradar/reviews — manually add a review to reply to. */
+router.post("/reviews", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const typeError = validateBody(req.body ?? {}, ["author", "text", "source"], []);
+    if (typeError) {
+      res.status(400).json({ error: typeError });
+      return;
+    }
+    const text = cleanStr(req.body?.text);
+    if (!text) {
+      res.status(400).json({ error: "Anmeldelsestekst er påkrevd" });
+      return;
+    }
+    let rating: number | null = null;
+    if (req.body?.rating !== undefined && req.body?.rating !== null) {
+      const r = Number(req.body.rating);
+      if (!Number.isInteger(r) || r < 1 || r > 5) {
+        res.status(400).json({ error: "Vurdering må være et helt tall mellom 1 og 5" });
+        return;
+      }
+      rating = r;
+    }
+    const [row] = await db
+      .insert(lokalReviewTable)
+      .values({
+        userId,
+        competitorId: null,
+        source: cleanStr(req.body?.source) ?? "manuell",
+        author: cleanStr(req.body?.author) ?? null,
+        rating,
+        text,
+      })
+      .returning();
+    res.status(201).json(serializeReview(row));
+  } catch (err) {
+    console.error("[lokalradar] create review error:", err);
+    res.status(500).json({ error: "Kunne ikke lagre anmeldelse" });
+  }
+});
+
+/** POST /lokalradar/generate/review-reply — suggest a reply to one review. */
+router.post("/generate/review-reply", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const reviewId = cleanStr(req.body?.reviewId);
+    if (!reviewId) {
+      res.status(400).json({ error: "reviewId er påkrevd" });
+      return;
+    }
+    const [review] = await db
+      .select()
+      .from(lokalReviewTable)
+      .where(and(eq(lokalReviewTable.id, reviewId), eq(lokalReviewTable.userId, userId)))
+      .limit(1);
+    if (!review) {
+      res.status(404).json({ error: "Anmeldelse ikke funnet" });
+      return;
+    }
+
+    const business = await getOrCreateBusiness(userId);
+    const limit = planLimits(business.plan).generations;
+    if (limit !== null && (await generationsUsedThisMonth(userId)) >= limit) {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit), code: "generation_limit" });
+      return;
+    }
+
+    const reply = await generateReviewReply(
+      { name: business.name, industry: business.industry, location: business.location },
+      { author: review.author, rating: review.rating, text: review.text },
+    );
+    // TODO: Full Google Business Profile API integration for direct publishing when user connects account
+    if (!reply) {
+      res
+        .status(502)
+        .json({ error: "AI-en klarte ikke å lage et svar akkurat nå. Prøv igjen." });
+      return;
+    }
+
+    const logged = await logGenerationWithLimit(userId, limit, {
+      kind: "review_reply",
+      channel: review.source ?? null,
+      prompt: (review.text ?? "").slice(0, 120) || null,
+      content: reply,
+    });
+    if (logged === "limit") {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit!), code: "generation_limit" });
+      return;
+    }
+
+    res.json({ reply, generation: serializeGeneration(logged) });
+  } catch (err) {
+    console.error("[lokalradar] review reply error:", err);
+    res.status(500).json({ error: "Kunne ikke lage svar" });
+  }
+});
+
+/** POST /lokalradar/generate/seo — SEO/website suggestions for the user's site. */
+router.post("/generate/seo", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const typeError = validateBody(req.body ?? {}, ["url"], []);
+    if (typeError) {
+      res.status(400).json({ error: typeError });
+      return;
+    }
+    const raw = cleanStr(req.body?.url);
+    if (!raw) {
+      res.status(400).json({ error: "Nettadresse er påkrevd" });
+      return;
+    }
+    const url = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+
+    const business = await getOrCreateBusiness(userId);
+    const limit = planLimits(business.plan).generations;
+    if (limit !== null && (await generationsUsedThisMonth(userId)) >= limit) {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit), code: "generation_limit" });
+      return;
+    }
+
+    let pageText: string;
+    try {
+      pageText = await fetchVisibleText(url);
+    } catch (err) {
+      res.status(400).json({
+        error: `Kunne ikke hente nettsiden: ${(err as Error).message}`,
+      });
+      return;
+    }
+    if (!pageText || pageText.trim().length < 50) {
+      res.status(422).json({
+        error:
+          "Fant lite tekstinnhold på nettsiden. Sjekk at adressen er riktig, eller prøv en annen side.",
+      });
+      return;
+    }
+
+    const suggestions = await analyzeSeo(
+      { name: business.name, industry: business.industry, location: business.location },
+      url,
+      pageText,
+    );
+    if (!suggestions) {
+      res
+        .status(502)
+        .json({ error: "AI-en klarte ikke å analysere nettsiden akkurat nå. Prøv igjen." });
+      return;
+    }
+
+    const logged = await logGenerationWithLimit(userId, limit, {
+      kind: "seo_tip",
+      channel: null,
+      prompt: url,
+      content: suggestions,
+    });
+    if (logged === "limit") {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit!), code: "generation_limit" });
+      return;
+    }
+
+    res.json({ url, suggestions, generation: serializeGeneration(logged) });
+  } catch (err) {
+    console.error("[lokalradar] seo analysis error:", err);
+    res.status(500).json({ error: "Kunne ikke analysere nettsiden" });
   }
 });
 

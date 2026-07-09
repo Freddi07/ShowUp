@@ -378,6 +378,75 @@ export interface LokalGenerationList {
   items: LokalGeneration[];
 }
 
+export interface LokalPostInput {
+  channel: string;
+  /** @nullable */
+  industry?: string | null;
+  /** @nullable */
+  season?: string | null;
+  /** @nullable */
+  tone?: string | null;
+  /** @nullable */
+  keywords?: string | null;
+}
+
+export interface LokalPostResult {
+  posts: string[];
+  generation: LokalGeneration;
+}
+
+export interface LokalReview {
+  id: string;
+  /** @nullable */
+  competitorId: string | null;
+  /** @nullable */
+  source: string | null;
+  /** @nullable */
+  author: string | null;
+  /** @nullable */
+  rating: number | null;
+  /** @nullable */
+  text: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface LokalReviewList {
+  items: LokalReview[];
+}
+
+export interface LokalReviewInput {
+  /** @nullable */
+  author?: string | null;
+  /** @nullable */
+  rating?: number | null;
+  /** @minLength 1 */
+  text: string;
+  /** @nullable */
+  source?: string | null;
+}
+
+export interface LokalReviewReplyInput {
+  reviewId: string;
+}
+
+export interface LokalReviewReplyResult {
+  reply: string;
+  generation: LokalGeneration;
+}
+
+export interface LokalSeoInput {
+  /** @minLength 1 */
+  url: string;
+}
+
+export interface LokalSeoResult {
+  url: string;
+  suggestions: string;
+  generation: LokalGeneration;
+}
+
 export interface LokalPrice {
   label: string;
   /** @nullable */
@@ -416,23 +485,6 @@ export interface LokalReviewData {
   /** @nullable */
   reviewCount: number | null;
   reviews: LokalReviewItem[];
-}
-
-export interface LokalReview {
-  id: string;
-  /** @nullable */
-  competitorId: string | null;
-  /** @nullable */
-  source: string | null;
-  /** @nullable */
-  author: string | null;
-  /** @nullable */
-  rating: number | null;
-  /** @nullable */
-  text: string | null;
-  /** @nullable */
-  reviewedAt: string | null;
-  createdAt: string;
 }
 
 export interface LokalScanResult {

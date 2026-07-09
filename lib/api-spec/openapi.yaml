@@ -687,6 +687,123 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/generate/posts:
+    post:
+      operationId: generateLokalPosts
+      tags: [lokalradar]
+      summary: Generate ready-to-post marketing drafts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalPostInput"
+      responses:
+        "200":
+          description: Generated posts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalPostResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Generation limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/reviews:
+    get:
+      operationId: listLokalReviews
+      tags: [lokalradar]
+      summary: List reviews available to the reply assistant
+      responses:
+        "200":
+          description: Review list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalReviewList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createLokalReview
+      tags: [lokalradar]
+      summary: Manually add a review to reply to
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalReviewInput"
+      responses:
+        "201":
+          description: Created review
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalReview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /lokalradar/generate/review-reply:
+    post:
+      operationId: generateLokalReviewReply
+      tags: [lokalradar]
+      summary: Suggest a professional reply to a review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalReviewReplyInput"
+      responses:
+        "200":
+          description: Suggested reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalReviewReplyResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Generation limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/generate/seo:
+    post:
+      operationId: generateLokalSeo
+      tags: [lokalradar]
+      summary: Generate SEO/website suggestions for the user's site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalSeoInput"
+      responses:
+        "200":
+          description: SEO suggestions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalSeoResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Generation limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   responses:
     Unauthorized:
@@ -1383,6 +1500,74 @@ components:
             $ref: "#/components/schemas/LokalGeneration"
       required:
         - items
+    LokalPostInput:
+      type: object
+      properties:
+        channel: { type: string }
+        industry: { type: ["string", "null"] }
+        season: { type: ["string", "null"] }
+        tone: { type: ["string", "null"] }
+        keywords: { type: ["string", "null"] }
+      required:
+        - channel
+    LokalPostResult:
+      type: object
+      properties:
+        posts:
+          type: array
+          items: { type: string }
+        generation: { $ref: "#/components/schemas/LokalGeneration" }
+      required:
+        - posts
+        - generation
+    LokalReviewList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LokalReview"
+      required:
+        - items
+    LokalReviewInput:
+      type: object
+      properties:
+        author: { type: ["string", "null"] }
+        rating: { type: ["integer", "null"] }
+        text: { type: string, minLength: 1 }
+        source: { type: ["string", "null"] }
+      required:
+        - text
+    LokalReviewReplyInput:
+      type: object
+      properties:
+        reviewId: { type: string }
+      required:
+        - reviewId
+    LokalReviewReplyResult:
+      type: object
+      properties:
+        reply: { type: string }
+        generation: { $ref: "#/components/schemas/LokalGeneration" }
+      required:
+        - reply
+        - generation
+    LokalSeoInput:
+      type: object
+      properties:
+        url: { type: string, minLength: 1 }
+      required:
+        - url
+    LokalSeoResult:
+      type: object
+      properties:
+        url: { type: string }
+        suggestions: { type: string }
+        generation: { $ref: "#/components/schemas/LokalGeneration" }
+      required:
+        - url
+        - suggestions
+        - generation
     LokalPrice:
       type: object
       properties:

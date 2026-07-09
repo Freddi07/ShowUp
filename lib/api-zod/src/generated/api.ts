@@ -658,3 +658,113 @@ export const ScanLokalCompetitorResponse = zod.object({
 })
 
 
+/**
+ * @summary Generate ready-to-post marketing drafts
+ */
+export const GenerateLokalPostsBody = zod.object({
+  "channel": zod.string(),
+  "industry": zod.string().nullish(),
+  "season": zod.string().nullish(),
+  "tone": zod.string().nullish(),
+  "keywords": zod.string().nullish()
+})
+
+export const GenerateLokalPostsResponse = zod.object({
+  "posts": zod.array(zod.string()),
+  "generation": zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "channel": zod.string().nullable(),
+  "prompt": zod.string().nullable(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary List reviews available to the reply assistant
+ */
+export const ListLokalReviewsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "competitorId": zod.string().nullable(),
+  "source": zod.string().nullable(),
+  "author": zod.string().nullable(),
+  "rating": zod.number().nullable(),
+  "text": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Manually add a review to reply to
+ */
+
+
+
+export const CreateLokalReviewBody = zod.object({
+  "author": zod.string().nullish(),
+  "rating": zod.number().nullish(),
+  "text": zod.string().min(1),
+  "source": zod.string().nullish()
+})
+
+export const CreateLokalReviewResponse = zod.object({
+  "id": zod.string(),
+  "competitorId": zod.string().nullable(),
+  "source": zod.string().nullable(),
+  "author": zod.string().nullable(),
+  "rating": zod.number().nullable(),
+  "text": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Suggest a professional reply to a review
+ */
+export const GenerateLokalReviewReplyBody = zod.object({
+  "reviewId": zod.string()
+})
+
+export const GenerateLokalReviewReplyResponse = zod.object({
+  "reply": zod.string(),
+  "generation": zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "channel": zod.string().nullable(),
+  "prompt": zod.string().nullable(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Generate SEO/website suggestions for the user's site
+ */
+
+
+
+export const GenerateLokalSeoBody = zod.object({
+  "url": zod.string().min(1)
+})
+
+export const GenerateLokalSeoResponse = zod.object({
+  "url": zod.string(),
+  "suggestions": zod.string(),
+  "generation": zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "channel": zod.string().nullable(),
+  "prompt": zod.string().nullable(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
