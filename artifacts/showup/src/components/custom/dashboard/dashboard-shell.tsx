@@ -12,6 +12,7 @@ import { isAdminEmail } from '@/lib/admin-config';
 import { apiFetch } from '@/lib/api-client';
 import { signOut, useSession } from '@/lib/auth-client';
 import { useOnboardingStatus } from '@/hooks/use-onboarding';
+import { AssistantWidget } from '@/components/custom/assistant-widget';
 import { DashboardNav } from './dashboard-nav';
 
 export interface DashboardShellProps {
@@ -138,6 +139,7 @@ export function DashboardShell({ children }: DashboardShellProps) {
           </section>
         </div>
       </div>
+      <AssistantWidget />
     </main>
   );
 }

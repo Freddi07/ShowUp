@@ -18,6 +18,7 @@ import mobileOauthRouter from "./mobile-oauth";
 import onboardingRouter from "./onboarding";
 import integrationsRouter from "./integrations";
 import integrationsOauthRouter from "./integrations-oauth";
+import assistantRouter from "./assistant";
 
 const router: IRouter = Router();
 
@@ -64,6 +65,9 @@ router.use("/integrations", integrationsOauthRouter);
 
 // Booking-source integrations (session-authed catalogue, status, sync, log)
 router.use("/integrations", integrationsRouter);
+
+// In-dashboard AI setup assistant (session-authed chat + tool use)
+router.use("/assistant", assistantRouter);
 
 // App data shared by web + mobile (mobile-facing read endpoints)
 router.use("/me", meRouter);
