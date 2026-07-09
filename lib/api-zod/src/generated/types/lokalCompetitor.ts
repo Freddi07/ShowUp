@@ -17,7 +17,12 @@ export interface LokalCompetitor {
   location: string | null;
   /** @nullable */
   notes: string | null;
+  status: string;
+  /** @nullable */
+  lastError: string | null;
   /** @nullable */
   lastCheckedAt: Date | null;
+  /** @nullable */
+  lastChangeAt: Date | null;
   createdAt: Date;
 }

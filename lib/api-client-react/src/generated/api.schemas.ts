@@ -302,8 +302,13 @@ export interface LokalCompetitor {
   location: string | null;
   /** @nullable */
   notes: string | null;
+  status: string;
+  /** @nullable */
+  lastError: string | null;
   /** @nullable */
   lastCheckedAt: string | null;
+  /** @nullable */
+  lastChangeAt: string | null;
   createdAt: string;
 }
 
@@ -371,6 +376,99 @@ export interface LokalGeneration {
 
 export interface LokalGenerationList {
   items: LokalGeneration[];
+}
+
+export interface LokalPrice {
+  label: string;
+  /** @nullable */
+  amount: number | null;
+  /** @nullable */
+  currency: string | null;
+  /** @nullable */
+  raw: string | null;
+}
+
+export interface LokalWebData {
+  prices: LokalPrice[];
+  offers: string[];
+  promotions: string[];
+  services: string[];
+  /** @nullable */
+  summary: string | null;
+}
+
+export interface LokalReviewItem {
+  /** @nullable */
+  author: string | null;
+  /** @nullable */
+  rating: number | null;
+  /** @nullable */
+  text: string | null;
+  /** @nullable */
+  time: string | null;
+  /** @nullable */
+  relativeTime: string | null;
+}
+
+export interface LokalReviewData {
+  /** @nullable */
+  rating: number | null;
+  /** @nullable */
+  reviewCount: number | null;
+  reviews: LokalReviewItem[];
+}
+
+export interface LokalReview {
+  id: string;
+  /** @nullable */
+  competitorId: string | null;
+  /** @nullable */
+  source: string | null;
+  /** @nullable */
+  author: string | null;
+  /** @nullable */
+  rating: number | null;
+  /** @nullable */
+  text: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+export interface LokalScanResult {
+  status: string;
+  /** @nullable */
+  message: string | null;
+  createdAlerts: number;
+  competitor: LokalCompetitor;
+  latestWeb: LokalWebData | null;
+  latestReviews: LokalReviewData | null;
+}
+
+export interface LokalRatingPoint {
+  capturedAt: string;
+  /** @nullable */
+  rating: number | null;
+  /** @nullable */
+  reviewCount: number | null;
+}
+
+export interface LokalPricePoint {
+  capturedAt: string;
+  /** @nullable */
+  minPrice: number | null;
+  /** @nullable */
+  avgPrice: number | null;
+}
+
+export interface LokalCompetitorDetail {
+  competitor: LokalCompetitor;
+  latestWeb: LokalWebData | null;
+  latestReviews: LokalReviewData | null;
+  alerts: LokalAlert[];
+  reviews: LokalReview[];
+  ratingHistory: LokalRatingPoint[];
+  priceHistory: LokalPricePoint[];
 }
 
 /**

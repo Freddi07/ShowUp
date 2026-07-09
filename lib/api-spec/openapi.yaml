@@ -545,6 +545,31 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
   /lokalradar/competitors/{id}:
+    get:
+      operationId: getLokalCompetitor
+      tags: [lokalradar]
+      summary: Competitor detail with snapshots, changes and trends
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Competitor detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalCompetitorDetail"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       operationId: deleteLokalCompetitor
       tags: [lokalradar]
@@ -636,6 +661,32 @@ paths:
                 $ref: "#/components/schemas/LokalGenerationList"
         "401":
           $ref: "#/components/responses/Unauthorized"
+  /lokalradar/competitors/{id}/scan:
+    post:
+      operationId: scanLokalCompetitor
+      tags: [lokalradar]
+      summary: Run a scan for a competitor now
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalScanResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   responses:
     Unauthorized:
@@ -1216,7 +1267,10 @@ components:
         googlePlaceId: { type: ["string", "null"] }
         location: { type: ["string", "null"] }
         notes: { type: ["string", "null"] }
+        status: { type: string }
+        lastError: { type: ["string", "null"] }
         lastCheckedAt: { type: ["string", "null"], format: date-time }
+        lastChangeAt: { type: ["string", "null"], format: date-time }
         createdAt: { type: string, format: date-time }
       required:
         - id
@@ -1225,7 +1279,10 @@ components:
         - googlePlaceId
         - location
         - notes
+        - status
+        - lastError
         - lastCheckedAt
+        - lastChangeAt
         - createdAt
     LokalCompetitorInput:
       type: object
@@ -1326,3 +1383,113 @@ components:
             $ref: "#/components/schemas/LokalGeneration"
       required:
         - items
+    LokalPrice:
+      type: object
+      properties:
+        label: { type: string }
+        amount: { type: ["number", "null"] }
+        currency: { type: ["string", "null"] }
+        raw: { type: ["string", "null"] }
+      required: [label, amount, currency, raw]
+    LokalWebData:
+      type: object
+      properties:
+        prices:
+          type: array
+          items: { $ref: "#/components/schemas/LokalPrice" }
+        offers:
+          type: array
+          items: { type: string }
+        promotions:
+          type: array
+          items: { type: string }
+        services:
+          type: array
+          items: { type: string }
+        summary: { type: ["string", "null"] }
+      required: [prices, offers, promotions, services, summary]
+    LokalReviewItem:
+      type: object
+      properties:
+        author: { type: ["string", "null"] }
+        rating: { type: ["number", "null"] }
+        text: { type: ["string", "null"] }
+        time: { type: ["string", "null"], format: date-time }
+        relativeTime: { type: ["string", "null"] }
+      required: [author, rating, text, time, relativeTime]
+    LokalReviewData:
+      type: object
+      properties:
+        rating: { type: ["number", "null"] }
+        reviewCount: { type: ["integer", "null"] }
+        reviews:
+          type: array
+          items: { $ref: "#/components/schemas/LokalReviewItem" }
+      required: [rating, reviewCount, reviews]
+    LokalReview:
+      type: object
+      properties:
+        id: { type: string }
+        competitorId: { type: ["string", "null"] }
+        source: { type: ["string", "null"] }
+        author: { type: ["string", "null"] }
+        rating: { type: ["integer", "null"] }
+        text: { type: ["string", "null"] }
+        reviewedAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+      required: [id, competitorId, source, author, rating, text, reviewedAt, createdAt]
+    LokalScanResult:
+      type: object
+      properties:
+        status: { type: string }
+        message: { type: ["string", "null"] }
+        createdAlerts: { type: integer }
+        competitor: { $ref: "#/components/schemas/LokalCompetitor" }
+        latestWeb:
+          oneOf:
+            - $ref: "#/components/schemas/LokalWebData"
+            - type: "null"
+        latestReviews:
+          oneOf:
+            - $ref: "#/components/schemas/LokalReviewData"
+            - type: "null"
+      required: [status, message, createdAlerts, competitor, latestWeb, latestReviews]
+    LokalRatingPoint:
+      type: object
+      properties:
+        capturedAt: { type: string, format: date-time }
+        rating: { type: ["number", "null"] }
+        reviewCount: { type: ["integer", "null"] }
+      required: [capturedAt, rating, reviewCount]
+    LokalPricePoint:
+      type: object
+      properties:
+        capturedAt: { type: string, format: date-time }
+        minPrice: { type: ["number", "null"] }
+        avgPrice: { type: ["number", "null"] }
+      required: [capturedAt, minPrice, avgPrice]
+    LokalCompetitorDetail:
+      type: object
+      properties:
+        competitor: { $ref: "#/components/schemas/LokalCompetitor" }
+        latestWeb:
+          oneOf:
+            - $ref: "#/components/schemas/LokalWebData"
+            - type: "null"
+        latestReviews:
+          oneOf:
+            - $ref: "#/components/schemas/LokalReviewData"
+            - type: "null"
+        alerts:
+          type: array
+          items: { $ref: "#/components/schemas/LokalAlert" }
+        reviews:
+          type: array
+          items: { $ref: "#/components/schemas/LokalReview" }
+        ratingHistory:
+          type: array
+          items: { $ref: "#/components/schemas/LokalRatingPoint" }
+        priceHistory:
+          type: array
+          items: { $ref: "#/components/schemas/LokalPricePoint" }
+      required: [competitor, latestWeb, latestReviews, alerts, reviews, ratingHistory, priceHistory]

@@ -53,7 +53,12 @@ export const lokalCompetitorTable = pgTable(
     googlePlaceId: text("googlePlaceId"),
     location: text("location"),
     notes: text("notes"),
+    // idle | scanning | ok | error
+    status: text("status").notNull().default("idle"),
+    lastError: text("lastError"),
     lastCheckedAt: timestamp("lastCheckedAt"),
+    // When the most recent meaningful change was detected.
+    lastChangeAt: timestamp("lastChangeAt"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
   },
   (t) => [index("LokalCompetitor_userId_idx").on(t.userId)],

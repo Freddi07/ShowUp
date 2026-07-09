@@ -38,10 +38,12 @@ import type {
   LokalBusiness,
   LokalBusinessInput,
   LokalCompetitor,
+  LokalCompetitorDetail,
   LokalCompetitorInput,
   LokalCompetitorList,
   LokalGenerationList,
   LokalOverview,
+  LokalScanResult,
   Me,
   NotificationSettings,
   NotificationSettingsUpdate,
@@ -1812,6 +1814,83 @@ export const useCreateLokalCompetitor = <TError = ErrorType<ErrorResponse | Unau
       return useMutation(getCreateLokalCompetitorMutationOptions(options));
     }
 
+export const getGetLokalCompetitorUrl = (id: string,) => {
+
+
+
+
+  return `/api/lokalradar/competitors/${id}`
+}
+
+/**
+ * @summary Competitor detail with snapshots, changes and trends
+ */
+export const getLokalCompetitor = async (id: string, options?: RequestInit): Promise<LokalCompetitorDetail> => {
+
+  return customFetch<LokalCompetitorDetail>(getGetLokalCompetitorUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetLokalCompetitorQueryKey = (id: string,) => {
+    return [
+    `/api/lokalradar/competitors/${id}`
+    ] as const;
+    }
+
+
+export const getGetLokalCompetitorQueryOptions = <TData = Awaited<ReturnType<typeof getLokalCompetitor>>, TError = ErrorType<UnauthorizedResponse | ErrorResponse>>(id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLokalCompetitor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetLokalCompetitorQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getLokalCompetitor>>> = ({ signal }) => getLokalCompetitor(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getLokalCompetitor>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetLokalCompetitorQueryResult = NonNullable<Awaited<ReturnType<typeof getLokalCompetitor>>>
+export type GetLokalCompetitorQueryError = ErrorType<UnauthorizedResponse | ErrorResponse>
+
+
+/**
+ * @summary Competitor detail with snapshots, changes and trends
+ */
+
+export function useGetLokalCompetitor<TData = Awaited<ReturnType<typeof getLokalCompetitor>>, TError = ErrorType<UnauthorizedResponse | ErrorResponse>>(
+ id: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getLokalCompetitor>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetLokalCompetitorQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getDeleteLokalCompetitorUrl = (id: string,) => {
 
 
@@ -2106,4 +2185,74 @@ export function useListLokalGenerations<TData = Awaited<ReturnType<typeof listLo
 
 
 
+
+export const getScanLokalCompetitorUrl = (id: string,) => {
+
+
+
+
+  return `/api/lokalradar/competitors/${id}/scan`
+}
+
+/**
+ * @summary Run a scan for a competitor now
+ */
+export const scanLokalCompetitor = async (id: string, options?: RequestInit): Promise<LokalScanResult> => {
+
+  return customFetch<LokalScanResult>(getScanLokalCompetitorUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getScanLokalCompetitorMutationOptions = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanLokalCompetitor>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof scanLokalCompetitor>>, TError,{id: string}, TContext> => {
+
+const mutationKey = ['scanLokalCompetitor'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof scanLokalCompetitor>>, {id: string}> = (props) => {
+          const {id} = props ?? {};
+
+          return  scanLokalCompetitor(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ScanLokalCompetitorMutationResult = NonNullable<Awaited<ReturnType<typeof scanLokalCompetitor>>>
+
+    export type ScanLokalCompetitorMutationError = ErrorType<UnauthorizedResponse | ErrorResponse>
+
+    /**
+ * @summary Run a scan for a competitor now
+ */
+export const useScanLokalCompetitor = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof scanLokalCompetitor>>, TError,{id: string}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof scanLokalCompetitor>>,
+        TError,
+        {id: string},
+        TContext
+      > => {
+      return useMutation(getScanLokalCompetitorMutationOptions(options));
+    }
 

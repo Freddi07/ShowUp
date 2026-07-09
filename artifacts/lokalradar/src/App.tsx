@@ -11,6 +11,7 @@ import OnboardingWizard from '@/pages/onboarding';
 
 import DashboardPage from '@/pages/dashboard';
 import KonkurrenterPage from '@/pages/konkurrenter';
+import KonkurrentDetaljPage from '@/pages/konkurrent-detalj';
 import MarkedsforingPage from '@/pages/markedsforing';
 import AIChatPage from '@/pages/ai-chat';
 import VarslerPage from '@/pages/varsler';
@@ -55,6 +56,13 @@ function AppRoutes() {
         <AuthGuard>
           <Shell>
             <KonkurrenterPage />
+          </Shell>
+        </AuthGuard>
+      </Route>
+      <Route path="/konkurrenter/:id">
+        <AuthGuard>
+          <Shell>
+            <KonkurrentDetaljPage />
           </Shell>
         </AuthGuard>
       </Route>

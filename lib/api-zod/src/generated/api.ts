@@ -425,7 +425,10 @@ export const ListLokalCompetitorsResponse = zod.object({
   "googlePlaceId": zod.string().nullable(),
   "location": zod.string().nullable(),
   "notes": zod.string().nullable(),
+  "status": zod.string(),
+  "lastError": zod.string().nullable(),
   "lastCheckedAt": zod.coerce.date().nullable(),
+  "lastChangeAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 }))
 })
@@ -452,8 +455,88 @@ export const CreateLokalCompetitorResponse = zod.object({
   "googlePlaceId": zod.string().nullable(),
   "location": zod.string().nullable(),
   "notes": zod.string().nullable(),
+  "status": zod.string(),
+  "lastError": zod.string().nullable(),
   "lastCheckedAt": zod.coerce.date().nullable(),
+  "lastChangeAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Competitor detail with snapshots, changes and trends
+ */
+export const GetLokalCompetitorParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const GetLokalCompetitorResponse = zod.object({
+  "competitor": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "website": zod.string().nullable(),
+  "googlePlaceId": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "notes": zod.string().nullable(),
+  "status": zod.string(),
+  "lastError": zod.string().nullable(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "lastChangeAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+}),
+  "latestWeb": zod.union([zod.object({
+  "prices": zod.array(zod.object({
+  "label": zod.string(),
+  "amount": zod.number().nullable(),
+  "currency": zod.string().nullable(),
+  "raw": zod.string().nullable()
+})),
+  "offers": zod.array(zod.string()),
+  "promotions": zod.array(zod.string()),
+  "services": zod.array(zod.string()),
+  "summary": zod.string().nullable()
+}),zod.null()]),
+  "latestReviews": zod.union([zod.object({
+  "rating": zod.number().nullable(),
+  "reviewCount": zod.number().nullable(),
+  "reviews": zod.array(zod.object({
+  "author": zod.string().nullable(),
+  "rating": zod.number().nullable(),
+  "text": zod.string().nullable(),
+  "time": zod.coerce.date().nullable(),
+  "relativeTime": zod.string().nullable()
+}))
+}),zod.null()]),
+  "alerts": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "severity": zod.string(),
+  "title": zod.string(),
+  "body": zod.string().nullable(),
+  "competitorId": zod.string().nullable(),
+  "read": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})),
+  "reviews": zod.array(zod.object({
+  "id": zod.string(),
+  "competitorId": zod.string().nullable(),
+  "source": zod.string().nullable(),
+  "author": zod.string().nullable(),
+  "rating": zod.number().nullable(),
+  "text": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})),
+  "ratingHistory": zod.array(zod.object({
+  "capturedAt": zod.coerce.date(),
+  "rating": zod.number().nullable(),
+  "reviewCount": zod.number().nullable()
+})),
+  "priceHistory": zod.array(zod.object({
+  "capturedAt": zod.coerce.date(),
+  "minPrice": zod.number().nullable(),
+  "avgPrice": zod.number().nullable()
+}))
 })
 
 
@@ -522,6 +605,56 @@ export const ListLokalGenerationsResponse = zod.object({
   "content": zod.string(),
   "createdAt": zod.coerce.date()
 }))
+})
+
+
+/**
+ * @summary Run a scan for a competitor now
+ */
+export const ScanLokalCompetitorParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const ScanLokalCompetitorResponse = zod.object({
+  "status": zod.string(),
+  "message": zod.string().nullable(),
+  "createdAlerts": zod.number(),
+  "competitor": zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "website": zod.string().nullable(),
+  "googlePlaceId": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "notes": zod.string().nullable(),
+  "status": zod.string(),
+  "lastError": zod.string().nullable(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "lastChangeAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+}),
+  "latestWeb": zod.union([zod.object({
+  "prices": zod.array(zod.object({
+  "label": zod.string(),
+  "amount": zod.number().nullable(),
+  "currency": zod.string().nullable(),
+  "raw": zod.string().nullable()
+})),
+  "offers": zod.array(zod.string()),
+  "promotions": zod.array(zod.string()),
+  "services": zod.array(zod.string()),
+  "summary": zod.string().nullable()
+}),zod.null()]),
+  "latestReviews": zod.union([zod.object({
+  "rating": zod.number().nullable(),
+  "reviewCount": zod.number().nullable(),
+  "reviews": zod.array(zod.object({
+  "author": zod.string().nullable(),
+  "rating": zod.number().nullable(),
+  "text": zod.string().nullable(),
+  "time": zod.coerce.date().nullable(),
+  "relativeTime": zod.string().nullable()
+}))
+}),zod.null()])
 })
 
 

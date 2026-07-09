@@ -1,74 +1,113 @@
 import { useState } from "react";
-import { 
-  useListLokalCompetitors, 
+import {
+  useListLokalCompetitors,
   getListLokalCompetitorsQueryKey,
   useCreateLokalCompetitor,
   useDeleteLokalCompetitor,
+  useScanLokalCompetitor,
   useGetLokalOverview,
-  getGetLokalOverviewQueryKey
+  getGetLokalOverviewQueryKey,
+  getListLokalAlertsQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Link, useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Users, Globe, MapPin, Trash2, CalendarDays } from "lucide-react";
-import { formatDate } from "@/lib/utils";
+import { Loader2, Plus, Users, Globe, MapPin, Trash2, RefreshCw, ChevronRight, Star } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === "ok")
+    return <Badge className="bg-green-500/15 text-green-700 dark:text-green-300 hover:bg-green-500/15 border-green-500/20">Overvåkes</Badge>;
+  if (status === "error")
+    return <Badge variant="destructive" className="bg-destructive/15 text-destructive hover:bg-destructive/15 border-destructive/20">Skannefeil</Badge>;
+  return <Badge variant="secondary">Ikke skannet</Badge>;
+}
 
 export default function KonkurrenterPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  
+  const [, navigate] = useLocation();
+
   const { data, isLoading } = useListLokalCompetitors({
-    query: { queryKey: getListLokalCompetitorsQueryKey() }
+    query: { queryKey: getListLokalCompetitorsQueryKey() },
   });
   const { data: overview } = useGetLokalOverview();
-  
+
   const createCompetitor = useCreateLokalCompetitor();
   const deleteCompetitor = useDeleteLokalCompetitor();
+  const scanCompetitor = useScanLokalCompetitor();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [scanningId, setScanningId] = useState<string | null>(null);
 
-  // Form
   const [formData, setFormData] = useState({
     name: "",
     website: "",
     location: "",
-    notes: ""
+    googlePlaceId: "",
+    notes: "",
   });
 
   const competitors = data?.items || [];
   const atLimit = overview?.competitorLimit !== null && (overview?.competitorCount ?? 0) >= (overview?.competitorLimit ?? 0);
 
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: getListLokalCompetitorsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetLokalOverviewQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListLokalAlertsQueryKey() });
+  };
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-
     try {
       await createCompetitor.mutateAsync({
         data: {
           name: formData.name,
           website: formData.website || null,
           location: formData.location || null,
+          googlePlaceId: formData.googlePlaceId || null,
           notes: formData.notes || null,
-        }
+        },
       });
-      toast({ title: "Konkurrent lagt til" });
+      toast({ title: "Konkurrent lagt til", description: "Kjør en skanning for å hente priser og anmeldelser." });
       setIsAddOpen(false);
-      setFormData({ name: "", website: "", location: "", notes: "" });
-      queryClient.invalidateQueries({ queryKey: getListLokalCompetitorsQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetLokalOverviewQueryKey() });
+      setFormData({ name: "", website: "", location: "", googlePlaceId: "", notes: "" });
+      invalidateAll();
     } catch (err: any) {
       toast({
         title: "Kunne ikke legge til",
         description: err?.cause?.error || "Du har kanskje nådd grensen for din plan.",
-        variant: "destructive"
+        variant: "destructive",
       });
+    }
+  };
+
+  const handleScan = async (id: string) => {
+    setScanningId(id);
+    try {
+      const result = await scanCompetitor.mutateAsync({ id });
+      invalidateAll();
+      if (result.status === "error") {
+        toast({ title: "Skanning feilet", description: result.message || undefined, variant: "destructive" });
+      } else if (result.createdAlerts > 0) {
+        toast({ title: `${result.createdAlerts} ny${result.createdAlerts === 1 ? "" : "e"} endring${result.createdAlerts === 1 ? "" : "er"} oppdaget` });
+      } else {
+        toast({ title: "Skanning fullført", description: "Ingen nye endringer siden sist." });
+      }
+    } catch {
+      toast({ title: "Kunne ikke skanne", variant: "destructive" });
+    } finally {
+      setScanningId(null);
     }
   };
 
@@ -77,9 +116,8 @@ export default function KonkurrenterPage() {
     try {
       await deleteCompetitor.mutateAsync({ id: deleteId });
       toast({ title: "Konkurrent fjernet" });
-      queryClient.invalidateQueries({ queryKey: getListLokalCompetitorsQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetLokalOverviewQueryKey() });
-    } catch (err) {
+      invalidateAll();
+    } catch {
       toast({ title: "Kunne ikke fjerne", variant: "destructive" });
     } finally {
       setDeleteId(null);
@@ -101,8 +139,10 @@ export default function KonkurrenterPage() {
 
       {atLimit && (
         <div className="bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 p-4 rounded-xl flex items-center justify-between">
-          <span className="text-sm font-medium">Du har nådd grensen på {overview?.competitorLimit} konkurrenter for din plan.</span>
-          <Button variant="outline" size="sm" className="bg-background text-foreground border-amber-500/20">Oppgrader plan</Button>
+          <span className="text-sm font-medium">Du har nådd grensen på {overview?.competitorLimit} konkurrent{overview?.competitorLimit === 1 ? "" : "er"} for din plan.</span>
+          <Link href="/innstillinger">
+            <Button variant="outline" size="sm" className="bg-background text-foreground border-amber-500/20">Oppgrader plan</Button>
+          </Link>
         </div>
       )}
 
@@ -117,7 +157,7 @@ export default function KonkurrenterPage() {
           </div>
           <h2 className="text-xl font-semibold mb-2">Ingen konkurrenter ennå</h2>
           <p className="text-muted-foreground max-w-md mb-8">
-            Legg til bedrifter du ønsker å overvåke, så sier vi ifra når de oppdaterer nettsidene sine eller får nye anmeldelser.
+            Legg til bedrifter du ønsker å overvåke, så sier vi ifra når de endrer priser, legger til tilbud eller får nye anmeldelser.
           </p>
           <Button onClick={() => setIsAddOpen(true)} size="lg">
             <Plus className="w-5 h-5 mr-2" />
@@ -127,21 +167,29 @@ export default function KonkurrenterPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {competitors.map((comp, i) => (
-            <Card key={comp.id} className="shadow-sm group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards" style={{ animationDelay: `${i * 50}ms` }}>
+            <Card
+              key={comp.id}
+              className="shadow-sm group animate-in fade-in slide-in-from-bottom-4 fill-mode-backwards cursor-pointer hover:border-primary/40 transition-colors"
+              style={{ animationDelay: `${i * 50}ms` }}
+              onClick={() => navigate(`/konkurrenter/${comp.id}`)}
+            >
               <CardContent className="p-6 flex flex-col h-full">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="font-bold text-lg line-clamp-1" title={comp.name}>{comp.name}</h3>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10 -mt-1 -mr-2"
-                    onClick={() => setDeleteId(comp.id)}
+                <div className="flex justify-between items-start mb-3 gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-lg line-clamp-1 mb-2" title={comp.name}>{comp.name}</h3>
+                    <StatusBadge status={comp.status} />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity hover:text-destructive hover:bg-destructive/10 -mt-1 -mr-2 shrink-0"
+                    onClick={(e) => { e.stopPropagation(); setDeleteId(comp.id); }}
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>
 
-                <div className="space-y-3 mb-6 flex-1">
+                <div className="space-y-2.5 mb-5 flex-1">
                   {comp.location && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <MapPin className="w-4 h-4 shrink-0" />
@@ -149,23 +197,47 @@ export default function KonkurrenterPage() {
                     </div>
                   )}
                   {comp.website && (
-                    <div className="flex items-center gap-2 text-sm text-primary hover:underline">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Globe className="w-4 h-4 shrink-0" />
-                      <a href={comp.website.startsWith('http') ? comp.website : `https://${comp.website}`} target="_blank" rel="noreferrer" className="truncate">
-                        {comp.website.replace(/^https?:\/\//, '')}
-                      </a>
+                      <span className="truncate">{comp.website.replace(/^https?:\/\//, "")}</span>
                     </div>
                   )}
-                  {comp.notes && (
-                    <div className="text-sm bg-muted/50 p-3 rounded-lg mt-2 text-muted-foreground line-clamp-3">
-                      {comp.notes}
+                  {comp.googlePlaceId && (
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Star className="w-4 h-4 shrink-0" />
+                      <span className="truncate">Google-profil koblet</span>
                     </div>
+                  )}
+                  {comp.status === "error" && comp.lastError && (
+                    <div className="text-xs text-destructive line-clamp-2">{comp.lastError}</div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground pt-4 border-t">
-                  <CalendarDays className="w-3.5 h-3.5" />
-                  Lagt til {formatDate(comp.createdAt)}
+                <div className="flex items-center justify-between gap-2 pt-4 border-t">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    {comp.lastChangeAt
+                      ? `Endring ${formatDateTime(comp.lastChangeAt)}`
+                      : comp.lastCheckedAt
+                        ? `Sjekket ${formatDateTime(comp.lastCheckedAt)}`
+                        : "Ikke skannet ennå"}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8"
+                      disabled={scanningId === comp.id}
+                      onClick={(e) => { e.stopPropagation(); handleScan(comp.id); }}
+                    >
+                      {scanningId === comp.id ? (
+                        <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      ) : (
+                        <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                      )}
+                      Skann nå
+                    </Button>
+                    <ChevronRight className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -175,52 +247,35 @@ export default function KonkurrenterPage() {
 
       {/* Add Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[460px]">
           <form onSubmit={handleCreate}>
             <DialogHeader>
               <DialogTitle>Ny konkurrent</DialogTitle>
               <DialogDescription>
-                Skriv inn detaljer om bedriften du vil overvåke.
+                Lim inn nettadressen deres. Legg gjerne til en Google-lenke for å følge med på anmeldelser.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Navn *</Label>
-                <Input 
-                  id="name" 
-                  value={formData.name} 
-                  onChange={e => setFormData({...formData, name: e.target.value})} 
-                  placeholder="F.eks. Salong Sentrum" 
-                  autoFocus
-                />
+                <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="F.eks. Salong Sentrum" autoFocus />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="website">Nettside</Label>
-                <Input 
-                  id="website" 
-                  value={formData.website} 
-                  onChange={e => setFormData({...formData, website: e.target.value})} 
-                  placeholder="https://..." 
-                />
+                <Label htmlFor="website">Nettadresse</Label>
+                <Input id="website" value={formData.website} onChange={(e) => setFormData({ ...formData, website: e.target.value })} placeholder="salongsentrum.no" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location">Sted</Label>
-                <Input 
-                  id="location" 
-                  value={formData.location} 
-                  onChange={e => setFormData({...formData, location: e.target.value})} 
-                  placeholder="F.eks. Storgata 12" 
-                />
+                <Label htmlFor="location">By eller adresse</Label>
+                <Input id="location" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="F.eks. Trondheim" />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="notes">Egne notater (valgfritt)</Label>
-                <Textarea 
-                  id="notes" 
-                  value={formData.notes} 
-                  onChange={e => setFormData({...formData, notes: e.target.value})} 
-                  placeholder="Hva er de spesielt gode på? Noe vi bør se etter?" 
-                  className="resize-none h-20"
-                />
+                <Label htmlFor="googlePlaceId">Google Business-lenke eller Place ID <span className="text-muted-foreground font-normal">(valgfritt)</span></Label>
+                <Input id="googlePlaceId" value={formData.googlePlaceId} onChange={(e) => setFormData({ ...formData, googlePlaceId: e.target.value })} placeholder="Google Maps-lenke eller ChIJ..." />
+                <p className="text-xs text-muted-foreground">Har du ikke lenken? Vi prøver å finne profilen fra navn og by.</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="notes">Egne notater <span className="text-muted-foreground font-normal">(valgfritt)</span></Label>
+                <Textarea id="notes" value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Hva er de spesielt gode på? Noe vi bør se etter?" className="resize-none h-20" />
               </div>
             </div>
             <DialogFooter>
@@ -240,7 +295,7 @@ export default function KonkurrenterPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Er du helt sikker?</AlertDialogTitle>
             <AlertDialogDescription>
-              Dette fjerner konkurrenten fra overvåkingen din. Du vil ikke lenger motta varsler om deres aktivitet.
+              Dette fjerner konkurrenten og all overvåkingshistorikk. Du vil ikke lenger motta varsler om deres aktivitet.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -252,7 +307,6 @@ export default function KonkurrenterPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
     </div>
   );
 }

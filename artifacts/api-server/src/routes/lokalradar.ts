@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { and, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   lokalAlertTable,
@@ -7,9 +7,18 @@ import {
   lokalCompetitorTable,
   lokalGenerationTable,
   lokalReviewTable,
+  lokalSnapshotTable,
+  type LokalAlert,
   type LokalBusiness,
+  type LokalCompetitor,
 } from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
+import { runScan } from "../lib/lokalradar/scan";
+import { extractPlaceId } from "../lib/lokalradar/google-places";
+import type {
+  LokalReviewData,
+  LokalWebData,
+} from "../lib/lokalradar/types";
 
 const router = Router();
 router.use(requireUser);
@@ -68,6 +77,35 @@ function serializeBusiness(b: LokalBusiness) {
     plan: b.plan,
     createdAt: b.createdAt.toISOString(),
     updatedAt: b.updatedAt.toISOString(),
+  };
+}
+
+function serializeCompetitor(c: LokalCompetitor) {
+  return {
+    id: c.id,
+    name: c.name,
+    website: c.website ?? null,
+    googlePlaceId: c.googlePlaceId ?? null,
+    location: c.location ?? null,
+    notes: c.notes ?? null,
+    status: c.status,
+    lastError: c.lastError ?? null,
+    lastCheckedAt: c.lastCheckedAt?.toISOString() ?? null,
+    lastChangeAt: c.lastChangeAt?.toISOString() ?? null,
+    createdAt: c.createdAt.toISOString(),
+  };
+}
+
+function serializeAlert(a: LokalAlert) {
+  return {
+    id: a.id,
+    type: a.type,
+    severity: a.severity,
+    title: a.title,
+    body: a.body ?? null,
+    competitorId: a.competitorId ?? null,
+    read: a.read,
+    createdAt: a.createdAt.toISOString(),
   };
 }
 
@@ -246,18 +284,7 @@ router.get("/competitors", async (req, res) => {
       .from(lokalCompetitorTable)
       .where(eq(lokalCompetitorTable.userId, req.user!.id))
       .orderBy(desc(lokalCompetitorTable.createdAt));
-    res.json({
-      items: rows.map((c) => ({
-        id: c.id,
-        name: c.name,
-        website: c.website ?? null,
-        googlePlaceId: c.googlePlaceId ?? null,
-        location: c.location ?? null,
-        notes: c.notes ?? null,
-        lastCheckedAt: c.lastCheckedAt?.toISOString() ?? null,
-        createdAt: c.createdAt.toISOString(),
-      })),
-    });
+    res.json({ items: rows.map(serializeCompetitor) });
   } catch (err) {
     console.error("[lokalradar] list competitors error:", err);
     res.status(500).json({ error: "Kunne ikke hente konkurrenter" });
@@ -286,11 +313,15 @@ router.post("/competitors", async (req, res) => {
     const business = await getOrCreateBusiness(userId);
     const limit = planLimits(business.plan).competitors;
 
+    // A pasted Google Maps link or raw Place ID is normalised to a Place ID.
+    // When it can't be parsed (e.g. a short share link), we store null and let
+    // the scan resolve the place from name + location via text search.
+    const rawPlace = cleanStr(req.body?.googlePlaceId) ?? null;
     const values = {
       userId,
       name,
       website: cleanStr(req.body?.website) ?? null,
-      googlePlaceId: cleanStr(req.body?.googlePlaceId) ?? null,
+      googlePlaceId: rawPlace ? extractPlaceId(rawPlace) : null,
       location: cleanStr(req.body?.location) ?? null,
       notes: cleanStr(req.body?.notes) ?? null,
     };
@@ -321,16 +352,7 @@ router.post("/competitors", async (req, res) => {
       return;
     }
 
-    res.status(201).json({
-      id: created.id,
-      name: created.name,
-      website: created.website ?? null,
-      googlePlaceId: created.googlePlaceId ?? null,
-      location: created.location ?? null,
-      notes: created.notes ?? null,
-      lastCheckedAt: created.lastCheckedAt?.toISOString() ?? null,
-      createdAt: created.createdAt.toISOString(),
-    });
+    res.status(201).json(serializeCompetitor(created));
   } catch (err) {
     console.error("[lokalradar] create competitor error:", err);
     res.status(500).json({ error: "Kunne ikke lagre konkurrent" });
@@ -355,7 +377,8 @@ router.delete("/competitors/:id", async (req, res) => {
       res.status(404).json({ error: "Konkurrent ikke funnet" });
       return;
     }
-    // Snapshots reference the competitor; remove them first.
+    // Snapshots have a FK to the competitor (no cascade); remove all child
+    // rows first, then the competitor itself.
     await db
       .delete(lokalAlertTable)
       .where(
@@ -365,12 +388,170 @@ router.delete("/competitors/:id", async (req, res) => {
         ),
       );
     await db
+      .delete(lokalReviewTable)
+      .where(
+        and(
+          eq(lokalReviewTable.competitorId, existing.id),
+          eq(lokalReviewTable.userId, userId),
+        ),
+      );
+    await db
+      .delete(lokalSnapshotTable)
+      .where(eq(lokalSnapshotTable.competitorId, existing.id));
+    await db
       .delete(lokalCompetitorTable)
       .where(eq(lokalCompetitorTable.id, existing.id));
     res.json({ ok: true });
   } catch (err) {
     console.error("[lokalradar] delete competitor error:", err);
     res.status(500).json({ error: "Kunne ikke slette konkurrent" });
+  }
+});
+
+/** GET /lokalradar/competitors/:id — detail with snapshots, changes, trends. */
+router.get("/competitors/:id", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const [competitor] = await db
+      .select()
+      .from(lokalCompetitorTable)
+      .where(
+        and(
+          eq(lokalCompetitorTable.id, req.params.id),
+          eq(lokalCompetitorTable.userId, userId),
+        ),
+      )
+      .limit(1);
+    if (!competitor) {
+      res.status(404).json({ error: "Konkurrent ikke funnet" });
+      return;
+    }
+
+    const [snapshots, alerts, reviews] = await Promise.all([
+      db
+        .select()
+        .from(lokalSnapshotTable)
+        .where(eq(lokalSnapshotTable.competitorId, competitor.id))
+        .orderBy(asc(lokalSnapshotTable.capturedAt)),
+      db
+        .select()
+        .from(lokalAlertTable)
+        .where(
+          and(
+            eq(lokalAlertTable.userId, userId),
+            eq(lokalAlertTable.competitorId, competitor.id),
+          ),
+        )
+        .orderBy(desc(lokalAlertTable.createdAt)),
+      db
+        .select()
+        .from(lokalReviewTable)
+        .where(
+          and(
+            eq(lokalReviewTable.userId, userId),
+            eq(lokalReviewTable.competitorId, competitor.id),
+          ),
+        )
+        .orderBy(desc(lokalReviewTable.reviewedAt)),
+    ]);
+
+    const webSnaps = snapshots.filter((s) => s.kind === "web");
+    const reviewSnaps = snapshots.filter((s) => s.kind === "reviews");
+
+    const latestWeb =
+      webSnaps.length > 0
+        ? (webSnaps[webSnaps.length - 1].data as LokalWebData)
+        : null;
+    const latestReviews =
+      reviewSnaps.length > 0
+        ? (reviewSnaps[reviewSnaps.length - 1].data as LokalReviewData)
+        : null;
+
+    const priceHistory = webSnaps.map((s) => {
+      const data = s.data as LokalWebData | null;
+      const amounts = (data?.prices ?? [])
+        .map((p) => p.amount)
+        .filter((a): a is number => typeof a === "number" && a > 0);
+      const minPrice = amounts.length ? Math.min(...amounts) : null;
+      const avgPrice = amounts.length
+        ? Math.round(amounts.reduce((sum, a) => sum + a, 0) / amounts.length)
+        : null;
+      return { capturedAt: s.capturedAt.toISOString(), minPrice, avgPrice };
+    });
+
+    const ratingHistory = reviewSnaps.map((s) => {
+      const data = s.data as LokalReviewData | null;
+      return {
+        capturedAt: s.capturedAt.toISOString(),
+        rating: data?.rating ?? null,
+        reviewCount: data?.reviewCount ?? null,
+      };
+    });
+
+    res.json({
+      competitor: serializeCompetitor(competitor),
+      latestWeb,
+      latestReviews,
+      alerts: alerts.map(serializeAlert),
+      reviews: reviews.map((r) => ({
+        id: r.id,
+        competitorId: r.competitorId ?? null,
+        source: r.source ?? null,
+        author: r.author ?? null,
+        rating: r.rating ?? null,
+        text: r.text ?? null,
+        reviewedAt: r.reviewedAt?.toISOString() ?? null,
+        createdAt: r.createdAt.toISOString(),
+      })),
+      ratingHistory,
+      priceHistory,
+    });
+  } catch (err) {
+    console.error("[lokalradar] competitor detail error:", err);
+    res.status(500).json({ error: "Kunne ikke hente konkurrent" });
+  }
+});
+
+/** POST /lokalradar/competitors/:id/scan — run a scan now. */
+router.post("/competitors/:id/scan", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const [competitor] = await db
+      .select()
+      .from(lokalCompetitorTable)
+      .where(
+        and(
+          eq(lokalCompetitorTable.id, req.params.id),
+          eq(lokalCompetitorTable.userId, userId),
+        ),
+      )
+      .limit(1);
+    if (!competitor) {
+      res.status(404).json({ error: "Konkurrent ikke funnet" });
+      return;
+    }
+
+    const business = await getOrCreateBusiness(userId);
+    const result = await runScan(business, competitor);
+
+    // Re-read the competitor so the caller gets fresh status/timestamps.
+    const [updated] = await db
+      .select()
+      .from(lokalCompetitorTable)
+      .where(eq(lokalCompetitorTable.id, competitor.id))
+      .limit(1);
+
+    res.json({
+      status: result.status,
+      message: result.message,
+      createdAlerts: result.createdAlerts,
+      competitor: serializeCompetitor(updated ?? competitor),
+      latestWeb: result.webData,
+      latestReviews: result.reviewData,
+    });
+  } catch (err) {
+    console.error("[lokalradar] scan competitor error:", err);
+    res.status(500).json({ error: "Kunne ikke skanne konkurrent" });
   }
 });
 
@@ -384,19 +565,7 @@ router.get("/alerts", async (req, res) => {
       .where(eq(lokalAlertTable.userId, userId))
       .orderBy(desc(lokalAlertTable.createdAt));
     const unreadCount = rows.filter((a) => !a.read).length;
-    res.json({
-      items: rows.map((a) => ({
-        id: a.id,
-        type: a.type,
-        severity: a.severity,
-        title: a.title,
-        body: a.body ?? null,
-        competitorId: a.competitorId ?? null,
-        read: a.read,
-        createdAt: a.createdAt.toISOString(),
-      })),
-      unreadCount,
-    });
+    res.json({ items: rows.map(serializeAlert), unreadCount });
   } catch (err) {
     console.error("[lokalradar] list alerts error:", err);
     res.status(500).json({ error: "Kunne ikke hente varsler" });
@@ -425,16 +594,7 @@ router.patch("/alerts/:id", async (req, res) => {
       res.status(404).json({ error: "Varsel ikke funnet" });
       return;
     }
-    res.json({
-      id: updated.id,
-      type: updated.type,
-      severity: updated.severity,
-      title: updated.title,
-      body: updated.body ?? null,
-      competitorId: updated.competitorId ?? null,
-      read: updated.read,
-      createdAt: updated.createdAt.toISOString(),
-    });
+    res.json(serializeAlert(updated));
   } catch (err) {
     console.error("[lokalradar] update alert error:", err);
     res.status(500).json({ error: "Kunne ikke oppdatere varsel" });
