@@ -1,0 +1,65 @@
+Jeg bygger videre på ShowUp (Next.js + TypeScript + Prisma), en SaaS for 
+kundepåminnelser. Jeg vil at bedriftskunder skal kunne koble til sitt 
+eksisterende bookingsystem fra dashbordet, slik at nye bookinger automatisk 
+trigger SMS/e-post/tale-påminnelser, uten manuell inntasting.
+
+Bygg en "Integrasjoner"-arkitektur som støtter flere kildesystemer via et 
+felles grensesnitt, og implementer følgende i prioritert rekkefølge:
+
+DATAMODELL (Prisma):
+- `Integration`: id, businessId, provider (enum), status, accessToken 
+  (kryptert), refreshToken (kryptert), webhookSecret, externalAccountId, 
+  lastSyncedAt
+- `IntegrationProvider` enum: GENERIC_WEBHOOK, GOOGLE_CALENDAR, 
+  OUTLOOK_CALENDAR, TIMMA, ONLINEBOOQ, FRESHA, BOOKSY, CALENDLY
+
+FELLES INTERFACE:
+- Definer et `BookingSyncProvider`-interface med metodene: 
+  connect(), disconnect(), fetchNewBookings(), verifyWebhook()
+- Hver leverandør skal implementere dette interfacet som egen modul under 
+  /lib/integrations/{provider}.ts, slik at ny leverandør kan legges til 
+  uten å endre kjernelogikk
+
+BYGG I DENNE REKKEFØLGEN:
+
+1. GENERIC_WEBHOOK (bygg og test fullstendig først)
+   - POST /api/integrations/webhook/[businessId], HMAC-verifisert
+   - Dashboard viser unik URL + secret + kopier-knapp
+
+2. GOOGLE_CALENDAR
+   - OAuth2 (readonly), lagre refresh token kryptert
+   - Push-notifikasjonskanal eller polling hvert 5. min
+   - Map events → Booking
+
+3. OUTLOOK_CALENDAR
+   - Samme mønster via Microsoft Graph API + OAuth
+
+4. CALENDLY
+   - Calendly støtter offisielle webhooks (invitee.created) — bygg 
+   OAuth-kobling + webhook-abonnement automatisk ved tilkobling
+
+5. TIMMA og ONLINEBOOQ
+   - IKKE anta at disse har åpne, dokumenterte partner-APIer. Før du 
+   koder: søk opp og vis meg gjeldende utviklerdokumentasjon eller 
+   partnerprogram for hver av dem. Hvis det krever manuell 
+   partnergodkjenning fra leverandøren, bygg heller en fallback: en 
+   "instruksjonsside" i dashbordet som viser bedriften hvordan de setter 
+   opp GENERIC_WEBHOOK mot sitt Timma/Onlinebooq-oppsett (mange slike 
+   systemer støtter utgående webhooks i sine egne innstillinger)
+
+6. FRESHA / BOOKSY
+   - Samme forbehold som punkt 5: sjekk om det finnes offisiell 
+   partner-API før du bygger direkte integrasjon
+
+JOBBKØ:
+- Bruk [BullMQ+Redis eller Trigger.dev] til å planlegge påminnelser 
+  24t/1t før avtale, trigget av enhver ny Booking uansett kilde
+
+DASHBOARD:
+- /dashboard/integrations: kort per leverandør, status, 
+  koble til/fra, testsynk, logg over siste 10 bookinger
+
+KRAV:
+- Bygg og verifiser hvert nummererte steg fullt ut før du går til neste
+- Aldri secrets i klartekst i UI/logger
+- Følg eksisterende kodestil
