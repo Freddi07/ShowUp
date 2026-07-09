@@ -4,6 +4,7 @@ import {
   getListLokalReviewsQueryKey,
   useCreateLokalReview,
   useGenerateLokalReviewReply,
+  useImportLokalGoogleReviews,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ import {
   Copy,
   CheckCheck,
   MessageSquareQuote,
+  Download,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -70,6 +72,7 @@ export function ReviewReplies({
   });
   const createReview = useCreateLokalReview();
   const generateReply = useGenerateLokalReviewReply();
+  const importGoogle = useImportLokalGoogleReviews();
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [form, setForm] = useState({ author: "", rating: "5", text: "", source: "" });
@@ -127,6 +130,23 @@ export function ReviewReplies({
     setTimeout(() => setCopiedId(null), 2000);
   };
 
+  const handleImportGoogle = async () => {
+    try {
+      const res = await importGoogle.mutateAsync();
+      toast({
+        title: res.imported > 0 ? "Import fullført" : "Ingen nye anmeldelser",
+        description: res.message,
+      });
+      queryClient.invalidateQueries({ queryKey: getListLokalReviewsQueryKey() });
+    } catch (err: any) {
+      toast({
+        title: "Kunne ikke importere fra Google",
+        description: err?.data?.error || "Prøv igjen om litt.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -134,10 +154,24 @@ export function ReviewReplies({
           Få forslag til profesjonelle svar på kundeanmeldelser. Rediger fritt før du
           publiserer.
         </p>
-        <Button variant="outline" onClick={() => setIsAddOpen(true)} className="shrink-0">
-          <Plus className="w-4 h-4 mr-2" />
-          Legg til anmeldelse
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            variant="outline"
+            onClick={handleImportGoogle}
+            disabled={importGoogle.isPending}
+          >
+            {importGoogle.isPending ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-2" />
+            )}
+            Importer fra Google
+          </Button>
+          <Button variant="outline" onClick={() => setIsAddOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            Legg til anmeldelse
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (

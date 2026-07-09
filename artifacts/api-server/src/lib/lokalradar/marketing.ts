@@ -91,6 +91,33 @@ Krav:
   }
 }
 
+const CHANNEL_IMAGE_HINT: Record<string, string> = {
+  google: "suitable as a Google Business Profile post image",
+  facebook: "suitable for a Facebook post",
+  instagram: "square composition suitable for an Instagram post",
+};
+
+/**
+ * Build an English image-generation prompt for gpt-image-1 based on a Norwegian
+ * marketing post. Text rendering in generated images is unreliable, so the
+ * prompt explicitly asks for no text, words, letters or logos.
+ */
+export function buildPostImagePrompt(
+  business: BusinessContext,
+  postText: string,
+  channel: string,
+): string {
+  const bransje = business.industry ? ` for a ${business.industry}` : "";
+  const channelHint = CHANNEL_IMAGE_HINT[channel] ?? "suitable for social media";
+  const post = postText.replace(/\s+/g, " ").trim().slice(0, 500);
+  return [
+    `A professional, high-quality, photorealistic marketing image${bransje} — a local small business in Norway.`,
+    `The image should visually capture the theme and mood of this social media post (written in Norwegian): "${post}".`,
+    `Bright, inviting, natural lighting, authentic and modern, ${channelHint}.`,
+    `Absolutely no text, no words, no letters, no numbers, no logos, no watermarks in the image.`,
+  ].join(" ");
+}
+
 // ---------------------------------------------------------------------------
 // Review-reply assistant
 // ---------------------------------------------------------------------------

@@ -16,13 +16,20 @@ import {
 } from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
 import { runScan } from "../lib/lokalradar/scan";
-import { extractPlaceId } from "../lib/lokalradar/google-places";
+import {
+  extractPlaceId,
+  isPlacesConfigured,
+  resolvePlaceId,
+  getPlaceDetails,
+} from "../lib/lokalradar/google-places";
 import { fetchVisibleText } from "../lib/lokalradar/web-scrape";
 import {
   generatePosts,
   generateReviewReply,
   analyzeSeo,
+  buildPostImagePrompt,
 } from "../lib/lokalradar/marketing";
+import { generateImageBuffer } from "@workspace/integrations-openai-ai-server/image";
 import type {
   LokalReviewData,
   LokalWebData,
@@ -968,6 +975,157 @@ router.post("/generate/seo", async (req, res) => {
   } catch (err) {
     console.error("[lokalradar] seo analysis error:", err);
     res.status(500).json({ error: "Kunne ikke analysere nettsiden" });
+  }
+});
+
+/** POST /lokalradar/generate/post-image — AI image for a generated post. */
+router.post("/generate/post-image", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+    const post = cleanStr(req.body?.post);
+    if (!post) {
+      res.status(400).json({ error: "Innleggstekst er påkrevd" });
+      return;
+    }
+    const channel = cleanStr(req.body?.channel) ?? "facebook";
+
+    const business = await getOrCreateBusiness(userId);
+    const limit = planLimits(business.plan).generations;
+    if (limit !== null && (await generationsUsedThisMonth(userId)) >= limit) {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit), code: "generation_limit" });
+      return;
+    }
+
+    const prompt = buildPostImagePrompt(
+      { name: business.name, industry: business.industry, location: business.location },
+      post,
+      channel,
+    );
+
+    let dataUrl: string;
+    try {
+      const buffer = await generateImageBuffer(prompt, "1024x1024");
+      if (!buffer || buffer.length === 0) throw new Error("tomt bilde");
+      dataUrl = `data:image/png;base64,${buffer.toString("base64")}`;
+    } catch (err) {
+      console.error("[lokalradar] post image generation error:", err);
+      res
+        .status(502)
+        .json({ error: "AI-en klarte ikke å lage et bilde akkurat nå. Prøv igjen." });
+      return;
+    }
+
+    // Log the generation to enforce the monthly cap. We store a short label
+    // (not the base64 image) so the history stays lightweight and readable.
+    const logged = await logGenerationWithLimit(userId, limit, {
+      kind: "post_image",
+      channel,
+      prompt: post.slice(0, 120),
+      content: "AI-bilde generert til innlegg",
+    });
+    if (logged === "limit") {
+      res
+        .status(403)
+        .json({ error: generationLimitMessage(limit!), code: "generation_limit" });
+      return;
+    }
+
+    res.json({ image: dataUrl, generation: serializeGeneration(logged) });
+  } catch (err) {
+    console.error("[lokalradar] post image error:", err);
+    res.status(500).json({ error: "Kunne ikke lage bilde" });
+  }
+});
+
+/** POST /lokalradar/reviews/import-google — import the user's Google reviews. */
+router.post("/reviews/import-google", async (req, res) => {
+  try {
+    const userId = req.user!.id;
+
+    if (!isPlacesConfigured()) {
+      res.status(503).json({
+        error:
+          "Google-tilkobling er ikke satt opp ennå. Kontakt oss for å aktivere import av Google-anmeldelser.",
+      });
+      return;
+    }
+
+    const business = await getOrCreateBusiness(userId);
+
+    // Resolve the business's Google Place ID: use the stored one, otherwise try
+    // to look it up from the business name + location.
+    let placeId = business.googlePlaceId ?? null;
+    if (!placeId && business.name) {
+      try {
+        placeId = await resolvePlaceId(business.name, business.location);
+      } catch (err) {
+        console.error("[lokalradar] resolvePlaceId error:", err);
+      }
+      // Persist a resolved Place ID so future imports are faster / stable.
+      if (placeId) {
+        await db
+          .update(lokalBusinessTable)
+          .set({ googlePlaceId: placeId, updatedAt: new Date() })
+          .where(eq(lokalBusinessTable.userId, userId));
+      }
+    }
+    if (!placeId) {
+      res.status(400).json({
+        error:
+          "Vi fant ikke Google-profilen din. Legg til Google Business-lenken din under Innstillinger, og prøv igjen.",
+      });
+      return;
+    }
+
+    let details;
+    try {
+      details = await getPlaceDetails(placeId);
+    } catch (err) {
+      console.error("[lokalradar] getPlaceDetails error:", err);
+      res.status(502).json({
+        error: "Kunne ikke hente anmeldelser fra Google akkurat nå. Prøv igjen senere.",
+      });
+      return;
+    }
+
+    const fetched = details.reviews ?? [];
+    // Load existing Google reviews to avoid inserting duplicates on re-import.
+    const existing = await db
+      .select({ author: lokalReviewTable.author, text: lokalReviewTable.text })
+      .from(lokalReviewTable)
+      .where(and(eq(lokalReviewTable.userId, userId), eq(lokalReviewTable.source, "google")));
+    const seen = new Set(existing.map((r) => `${r.author ?? ""}|${r.text ?? ""}`));
+
+    let imported = 0;
+    for (const r of fetched) {
+      const key = `${r.author ?? ""}|${r.text ?? ""}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      await db.insert(lokalReviewTable).values({
+        userId,
+        competitorId: null,
+        source: "google",
+        author: r.author ?? null,
+        rating: typeof r.rating === "number" ? Math.round(r.rating) : null,
+        text: r.text ?? null,
+        reviewedAt: r.time ? new Date(r.time) : null,
+      });
+      imported += 1;
+    }
+
+    const message =
+      fetched.length === 0
+        ? "Fant ingen anmeldelser på Google-profilen din ennå."
+        : imported === 0
+          ? "Anmeldelsene dine fra Google er allerede importert."
+          : `Importerte ${imported} ${imported === 1 ? "anmeldelse" : "anmeldelser"} fra Google.`;
+
+    res.json({ imported, total: fetched.length, message });
+  } catch (err) {
+    console.error("[lokalradar] import google reviews error:", err);
+    res.status(500).json({ error: "Kunne ikke importere anmeldelser fra Google" });
   }
 });
 

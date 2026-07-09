@@ -436,6 +436,23 @@ export interface LokalReviewReplyResult {
   generation: LokalGeneration;
 }
 
+export interface LokalPostImageInput {
+  /** @minLength 1 */
+  post: string;
+  channel?: string;
+}
+
+export interface LokalPostImageResult {
+  image: string;
+  generation: LokalGeneration;
+}
+
+export interface LokalReviewImportResult {
+  imported: number;
+  total: number;
+  message: string;
+}
+
 export interface LokalSeoInput {
   /** @minLength 1 */
   url: string;

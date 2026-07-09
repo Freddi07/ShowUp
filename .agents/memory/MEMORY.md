@@ -16,4 +16,5 @@
 - [LokalRadar foundation](lokalradar.md) — separate Norwegian product/artifact at /lokalradar/, reuses showup api-server/db/auth same-origin; /api/lokalradar/* namespace; plan caps need advisory-lock atomicity
 - [SSRF guard + pool-safe scan locking](ssrf-and-scan-locking.md) — safely fetch user-supplied URLs (custom DNS lookup + sync IP-literal check); pg_advisory_xact_lock via bare db.execute is a no-op — use atomic status-claim UPDATE
 - [API client error shape](api-client-error-shape.md) — read backend errors from `err.data.error` (NOT `err.cause.error`) in showup/lokalradar web toasts
+- [LokalRadar marketing media](lokalradar-marketing-media.md) — runtime AI images via OpenAI gpt-image-1 (Anthropic can't do images); Google review import reuses Places API (~5 reviews, needs GOOGLE_PLACES_API_KEY)
 - [Auto-reminder engine & integrations foundation](showup-reminders-integrations.md) — in-process poller (Reserved VM, not autoscale); REMINDED-only-on-PENDING keeps SMS reply matching; ledger-first ingest dedup; @workspace/db needs `tsc --build` after schema edits; no tsx (esbuild+NODE_ENV=production to run TS)

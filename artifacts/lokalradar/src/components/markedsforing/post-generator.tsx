@@ -1,5 +1,8 @@
 import { useState } from "react";
-import { useGenerateLokalPosts } from "@workspace/api-client-react";
+import {
+  useGenerateLokalPosts,
+  useGenerateLokalPostImage,
+} from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,7 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, Sparkles, Copy, CheckCheck, PenLine } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  Copy,
+  CheckCheck,
+  PenLine,
+  ImageIcon,
+  Download,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const CHANNELS = [
@@ -36,6 +47,7 @@ export function PostGenerator({
 }) {
   const { toast } = useToast();
   const generate = useGenerateLokalPosts();
+  const generateImage = useGenerateLokalPostImage();
 
   const [channel, setChannel] = useState("facebook");
   const [industry, setIndustry] = useState("");
@@ -45,11 +57,39 @@ export function PostGenerator({
 
   const [posts, setPosts] = useState<string[]>([]);
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null);
+  const [images, setImages] = useState<Record<number, string>>({});
+  const [imgPendingIdx, setImgPendingIdx] = useState<number | null>(null);
 
   const handleCopy = (idx: number, text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedIdx(idx);
     setTimeout(() => setCopiedIdx(null), 2000);
+  };
+
+  const handleGenerateImage = async (idx: number, post: string) => {
+    setImgPendingIdx(idx);
+    try {
+      const res = await generateImage.mutateAsync({ data: { post, channel } });
+      setImages((prev) => ({ ...prev, [idx]: res.image }));
+      onGenerated();
+    } catch (err: any) {
+      toast({
+        title: "Kunne ikke lage bilde",
+        description: err?.data?.error || "Prøv igjen om litt.",
+        variant: "destructive",
+      });
+    } finally {
+      setImgPendingIdx(null);
+    }
+  };
+
+  const handleDownload = (idx: number, dataUrl: string) => {
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `innlegg-bilde-${idx + 1}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   const handleGenerate = async (e: React.FormEvent) => {
@@ -213,6 +253,54 @@ export function PostGenerator({
                     )}
                   </Button>
                 </div>
+
+                {images[i] ? (
+                  <div className="mt-4 space-y-2 border-t pt-4">
+                    <img
+                      src={images[i]}
+                      alt="AI-generert bilde til innlegget"
+                      className="w-full rounded-xl border"
+                    />
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={imgPendingIdx === i || atLimit}
+                        onClick={() => handleGenerateImage(i, post)}
+                      >
+                        {imgPendingIdx === i ? (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        ) : (
+                          <Sparkles className="w-4 h-4 mr-2" />
+                        )}
+                        Nytt bilde
+                      </Button>
+                      <Button size="sm" onClick={() => handleDownload(i, images[i])}>
+                        <Download className="w-4 h-4 mr-2" />
+                        Last ned
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 border-t pt-4 flex items-center justify-between gap-3">
+                    <span className="text-xs text-muted-foreground">
+                      Lag et passende bilde til innlegget med AI.
+                    </span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={imgPendingIdx === i || atLimit}
+                      onClick={() => handleGenerateImage(i, post)}
+                    >
+                      {imgPendingIdx === i ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <ImageIcon className="w-4 h-4 mr-2" />
+                      )}
+                      Generer bilde
+                    </Button>
+                  </div>
+                )}
               </div>
             ))}
           </div>

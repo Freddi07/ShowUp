@@ -745,6 +745,40 @@ export const GenerateLokalReviewReplyResponse = zod.object({
 
 
 /**
+ * @summary Generate an AI image for a marketing post
+ */
+
+
+
+export const GenerateLokalPostImageBody = zod.object({
+  "post": zod.string().min(1),
+  "channel": zod.string().optional()
+})
+
+export const GenerateLokalPostImageResponse = zod.object({
+  "image": zod.string(),
+  "generation": zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "channel": zod.string().nullable(),
+  "prompt": zod.string().nullable(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+})
+
+
+/**
+ * @summary Import the user's reviews from their Google profile
+ */
+export const ImportLokalGoogleReviewsResponse = zod.object({
+  "imported": zod.number(),
+  "total": zod.number(),
+  "message": zod.string()
+})
+
+
+/**
  * @summary Generate SEO/website suggestions for the user's site
  */
 

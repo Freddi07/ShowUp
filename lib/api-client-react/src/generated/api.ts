@@ -43,9 +43,12 @@ import type {
   LokalCompetitorList,
   LokalGenerationList,
   LokalOverview,
+  LokalPostImageInput,
+  LokalPostImageResult,
   LokalPostInput,
   LokalPostResult,
   LokalReview,
+  LokalReviewImportResult,
   LokalReviewInput,
   LokalReviewList,
   LokalReviewReplyInput,
@@ -2550,6 +2553,146 @@ export const useGenerateLokalReviewReply = <TError = ErrorType<UnauthorizedRespo
         TContext
       > => {
       return useMutation(getGenerateLokalReviewReplyMutationOptions(options));
+    }
+
+export const getGenerateLokalPostImageUrl = () => {
+
+
+
+
+  return `/api/lokalradar/generate/post-image`
+}
+
+/**
+ * @summary Generate an AI image for a marketing post
+ */
+export const generateLokalPostImage = async (lokalPostImageInput: LokalPostImageInput, options?: RequestInit): Promise<LokalPostImageResult> => {
+
+  return customFetch<LokalPostImageResult>(getGenerateLokalPostImageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(lokalPostImageInput)
+  }
+);}
+
+
+
+
+export const getGenerateLokalPostImageMutationOptions = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalPostImage>>, TError,{data: BodyType<LokalPostImageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof generateLokalPostImage>>, TError,{data: BodyType<LokalPostImageInput>}, TContext> => {
+
+const mutationKey = ['generateLokalPostImage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof generateLokalPostImage>>, {data: BodyType<LokalPostImageInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  generateLokalPostImage(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type GenerateLokalPostImageMutationResult = NonNullable<Awaited<ReturnType<typeof generateLokalPostImage>>>
+    export type GenerateLokalPostImageMutationBody = BodyType<LokalPostImageInput>
+    export type GenerateLokalPostImageMutationError = ErrorType<UnauthorizedResponse | ErrorResponse>
+
+    /**
+ * @summary Generate an AI image for a marketing post
+ */
+export const useGenerateLokalPostImage = <TError = ErrorType<UnauthorizedResponse | ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof generateLokalPostImage>>, TError,{data: BodyType<LokalPostImageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof generateLokalPostImage>>,
+        TError,
+        {data: BodyType<LokalPostImageInput>},
+        TContext
+      > => {
+      return useMutation(getGenerateLokalPostImageMutationOptions(options));
+    }
+
+export const getImportLokalGoogleReviewsUrl = () => {
+
+
+
+
+  return `/api/lokalradar/reviews/import-google`
+}
+
+/**
+ * @summary Import the user's reviews from their Google profile
+ */
+export const importLokalGoogleReviews = async ( options?: RequestInit): Promise<LokalReviewImportResult> => {
+
+  return customFetch<LokalReviewImportResult>(getImportLokalGoogleReviewsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getImportLokalGoogleReviewsMutationOptions = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importLokalGoogleReviews>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof importLokalGoogleReviews>>, TError,void, TContext> => {
+
+const mutationKey = ['importLokalGoogleReviews'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof importLokalGoogleReviews>>, void> = () => {
+
+
+          return  importLokalGoogleReviews(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ImportLokalGoogleReviewsMutationResult = NonNullable<Awaited<ReturnType<typeof importLokalGoogleReviews>>>
+
+    export type ImportLokalGoogleReviewsMutationError = ErrorType<ErrorResponse | UnauthorizedResponse>
+
+    /**
+ * @summary Import the user's reviews from their Google profile
+ */
+export const useImportLokalGoogleReviews = <TError = ErrorType<ErrorResponse | UnauthorizedResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof importLokalGoogleReviews>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof importLokalGoogleReviews>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getImportLokalGoogleReviewsMutationOptions(options));
     }
 
 export const getGenerateLokalSeoUrl = () => {

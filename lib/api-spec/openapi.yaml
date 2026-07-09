@@ -778,6 +778,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/generate/post-image:
+    post:
+      operationId: generateLokalPostImage
+      tags: [lokalradar]
+      summary: Generate an AI image for a marketing post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalPostImageInput"
+      responses:
+        "200":
+          description: Generated image
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalPostImageResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Generation limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/reviews/import-google:
+    post:
+      operationId: importLokalGoogleReviews
+      tags: [lokalradar]
+      summary: Import the user's reviews from their Google profile
+      responses:
+        "200":
+          description: Import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalReviewImportResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "400":
+          description: Missing Google profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Google integration not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /lokalradar/generate/seo:
     post:
       operationId: generateLokalSeo
@@ -1552,6 +1604,31 @@ components:
       required:
         - reply
         - generation
+    LokalPostImageInput:
+      type: object
+      properties:
+        post: { type: string, minLength: 1 }
+        channel: { type: string }
+      required:
+        - post
+    LokalPostImageResult:
+      type: object
+      properties:
+        image: { type: string }
+        generation: { $ref: "#/components/schemas/LokalGeneration" }
+      required:
+        - image
+        - generation
+    LokalReviewImportResult:
+      type: object
+      properties:
+        imported: { type: integer }
+        total: { type: integer }
+        message: { type: string }
+      required:
+        - imported
+        - total
+        - message
     LokalSeoInput:
       type: object
       properties:
