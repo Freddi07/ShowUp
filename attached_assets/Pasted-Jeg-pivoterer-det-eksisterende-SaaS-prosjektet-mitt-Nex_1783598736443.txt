@@ -1,0 +1,61 @@
+Jeg pivoterer det eksisterende SaaS-prosjektet mitt (Next.js + TypeScript + 
+Prisma, tidligere kundepåminnelser) til et nytt produkt: en AI-telefonsvarer 
+for norske småbedrifter som fanger opp ubesvarte samtaler, snakker med kunden 
+på norsk, tar imot bookingforespørsler, og varsler bedriften.
+
+GJENBRUK: Behold eksisterende Twilio-oppsett, Prisma-database og 
+jobbkø-arkitektur. Bygg om datamodellen og UI-et rundt dette nye 
+kjernescenarioet.
+
+DATAMODELL (utvid Prisma-schema):
+- `Call`: id, businessId, fromNumber, receivedAt, durationSeconds, 
+  wasAnsweredByAI (boolean), transcription (text), recordingUrl, 
+  outcome (enum: BOOKING_CREATED, MESSAGE_TAKEN, NO_INTEREST, ESCALATED)
+- `BusinessAIConfig`: businessId, greeting, openingHours (json), 
+  services (json), voicePreference, escalationThresholdSeconds, 
+  knowledgeBaseText
+
+TELEFONI-FLYT (Twilio):
+1. Sett opp Twilio-nummer med "no answer" forwarding-regel: hvis bedriftens 
+   eksisterende nummer ikke svarer innen konfigurerbar terskel (default 15 
+   sek), rutes samtalen til AI-håndtering
+2. Bruk Twilio Voice + en talemodell (ElevenLabs eller lignende for naturlig 
+   norsk tale, koblet med Anthropic API for samtalelogikk i sanntid via 
+   function calling)
+3. AI-en skal: hilse med bedriftens navn, forstå ærend, tilby ledige 
+   tidspunkt (integrert mot Google Calendar-tilgjengelighet), bekrefte 
+   booking, avslutte samtalen
+4. Lagre full transkripsjon og lydopptak knyttet til Call-modellen
+5. Trigg SMS til både kunde (bekreftelse) og bedrift (varsel om ny booking 
+   eller tatt melding) umiddelbart etter samtaleslutt
+
+DASHBOARD — bygg disse sidene:
+1. /dashboard (oversikt): nøkkeltall siste 7/30 dager — ubesvarte samtaler 
+   fanget, bookinger generert, estimert reddet omsetning
+2. /dashboard/calls: samtalelogg med filtrering på status, avspilling av 
+   opptak, visning av transkripsjon
+3. /dashboard/ai-config: skjema for åpningstider, tjenester/priser, 
+   stemmevalg, eskaleringsterskel — dette mater AI-ens systemprompt
+4. /dashboard/bookings: kalendervisning av AI-genererte bookinger, med 
+   godkjenn/avvis/flytt-funksjonalitet
+5. /dashboard/integrations: gjenbruk eksisterende Google/Outlook Calendar 
+   OAuth-integrasjon fra tidligere byggetrinn
+
+HJEMMESIDE — bygg disse seksjonene på forsiden (se egen tekst jeg limer inn 
+separat for faktisk copy):
+1. Hero med CTA
+2. Problem-seksjon med statistikk
+3. "Slik fungerer det" i 3 steg
+4. Bransjetilpassede eksempler (frisør, bilverksted, klinikk, håndverker) 
+   med eksempel-samtaleutdrag
+5. Prising
+6. Footer med personvern (viktig — vi lagrer samtaleopptak og transkripsjon)
+
+KRAV:
+- Bygg og test telefoni-flyten med ett enkelt scenario først (ring inn, 
+  ingen svarer, AI tar imot en enkel bookingforespørsel) før dashbord og 
+  hjemmeside bygges ut
+- All samtaledata er sensitiv — krypter opptak i lagring, og bygg inn 
+  automatisk sletting etter konfigurerbar periode (GDPR-hensyn siden dette 
+  er stemmedata om identifiserbare personer)
+- Følg eksisterende kodestil i prosjektet

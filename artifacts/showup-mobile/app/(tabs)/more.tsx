@@ -26,6 +26,16 @@ export default function MoreScreen() {
       <GradientHeader title="Mer" subtitle={user?.name ?? 'Meny'} />
 
       <ScrollView contentContainerStyle={styles.scroll}>
+        <SectionLabel text="HJELP" />
+        <Card>
+          <MenuRow
+            icon="message-circle"
+            title="Assistent"
+            subtitle="Få hjelp til oppsett og integrasjoner"
+            onPress={() => router.push('/assistant')}
+          />
+        </Card>
+
         <SectionLabel text="OVERSIKT" />
         <Card>
           <MenuRow

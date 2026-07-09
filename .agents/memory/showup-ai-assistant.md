@@ -38,6 +38,21 @@ extraction dir that vanishes mid-watch.
 **Fix:** it's transient; once the install settles the `_tmp_` dir is gone —
 just restart the mobile workflow. Not a code bug.
 
+## Mobile client (Expo)
+The assistant also runs in the Expo app (screen at `app/assistant.tsx`, client in
+`lib/assistant.ts`, opened from the "Mer" tab).
+- **SSE streaming on React Native requires `expo/fetch`** — RN's built-in
+  `fetch` cannot stream a response body (`res.body.getReader()` is unavailable).
+  `TextDecoder` is provided globally by Expo SDK 54's winter runtime, so chunk
+  decoding works. Auth is bearer-token (from `lib/auth.ts`), not cookies.
+- **Streaming lifecycle needs a request-id guard.** Because stream events patch
+  "the last assistant message" globally, a reset/unmount mid-stream lets late
+  events contaminate the next conversation. Bump a `requestIdRef` on every send
+  and on reset, and gate every post-await setState on `mounted && id===mine`.
+- Copy-to-clipboard: set the "copied" UI state *before* awaiting
+  `Clipboard.setStringAsync` (it can reject on the web build and swallow the
+  visual confirmation).
+
 ## Test account gate
 Use the seeded test account (email + password are set by
 `artifacts/api-server/build-seed.mjs` / `src/seed.ts` — read them there, do NOT
