@@ -1,0 +1,82 @@
+You are an expert full-stack SaaS developer specialized in AI tools for Norwegian small businesses. Build a complete, production-ready SaaS application called **LokalRadar**.
+
+**Product vision (combines both user ideas):**
+LokalRadar is an all-in-one AI tool for Norwegian local businesses (småbedrifter, butikker, restauranter, håndverkere, frisører etc.). It has two tightly integrated modules:
+
+1. **KonkurrentOvervåking**  
+   Users add competitors by pasting website URL and/or Google Business Profile URL. The system scrapes the website for prices/offers, fetches Google reviews/rating via Places API, detects changes (price drops, new reviews, new offers), and uses Claude to analyze what the change means and suggest concrete actions for the user.
+
+2. **Markedsføringsassistent**  
+   AI generates ready-to-use Google Posts / sosiale medier-innlegg, writes professional replies to Google reviews, and gives SEO/website improvement suggestions. The two modules feed each other (e.g. competitor insights can inspire post ideas).
+
+**Unified experience:** One login, one dashboard, central AI chat that has context from both modules, and smart alerts that combine monitoring + marketing opportunities.
+
+**Tech stack (use exactly this):**
+- Next.js 15 (App Router) + TypeScript + Tailwind CSS + shadcn/ui + Radix UI
+- Supabase (Auth + Postgres + Realtime + Storage) – this is the recommended stack for AI SaaS in 2026
+- Anthropic SDK (@anthropic-ai/sdk) – Claude 3.5 Sonnet or Opus
+- Google Places API (New) for reviews and rating
+- Scraping: axios + cheerio (primary). Send HTML to Claude for intelligent structured extraction (prices, offers, etc.)
+- Charts: Recharts
+- Forms: react-hook-form + zod
+- Icons: lucide-react
+- Make it a full PWA (web app manifest + installable on mobile) so it feels like a native mobile app
+
+**Critical requirements:**
+- **All user-facing text must be in natural, professional Norwegian (bokmål).** Headlines, buttons, labels, toasts, AI outputs, emails – everything. Generate high-quality Norwegian from the start.
+- Modern, clean, trustworthy design (professional blues/greens, good typography, excellent mobile experience).
+- Freemium model: Free tier (1 competitor + limited AI generations), Pro (149 kr/mnd), Bedrift (399 kr/mnd – multiple locations + priority support).
+
+**Database schema (create via Supabase):**
+- businesses (user's own business info)
+- competitors (user_id, name, website_url, google_place_id, last_scanned_at, current_data jsonb)
+- snapshots (competitor_id, scanned_at, data jsonb)
+- alerts (user_id, competitor_id, type, title, message, ai_suggestion, is_read, created_at)
+- generations (logs of AI content created)
+- reviews (stored historical reviews for trend analysis)
+
+**Pages & features to build:**
+
+**Public landing page (/):**
+Beautiful marketing site that sells both modules. Strong hero, problem/solution, two clear feature sections (KonkurrentOvervåking + Markedsføringsassistent), "Slik fungerer det" (4 steps), pricing table, FAQ, final CTA to sign up. Use compelling Norwegian copy.
+
+**After login – main app:**
+- Sidebar navigation: Oversikt, Konkurrenter, Markedsføring, AI Chat, Varsler, Innstillinger
+- **/dashboard (Oversikt):** KPI cards, recent alerts feed (combined from both modules), quick actions, mini comparison charts
+- **/konkurrenter:** Add competitor form (website URL + optional Google Business URL or name+city). List of competitors with status, last change, "Scan nå" button. Click → detail page with history, detected changes, AI analysis, price/review trends (charts), suggested actions
+- **/markedsforing:** 
+  - Innleggsgenerator (industry/season/tone/keywords → 3–5 ready posts)
+  - Anmeldelsessvar-assistent (list reviews + AI-forslag + edit + copy)
+  - SEO-analyse (paste own website URL → suggestions)
+- **/ai-chat:** Full conversational AI assistant with context from the user's competitors and business. User can ask natural questions in Norwegian.
+- **/varsler:** All alerts with filters, mark as read, realtime updates via Supabase
+- **/innstillinger:** API keys (user brings own Anthropic + Google Places key), notification preferences, connected profiles
+
+**Core logic (MVP – buildable by one person):**
+- "Scan nå" on a competitor: Fetch website HTML → send relevant sections to Claude with a strong extraction prompt → get structured JSON (prices, offers, promotions). If google_place_id exists → call Google Places Details (get rating, review_count + up to 5 recent reviews). Compare with last snapshot → detect changes → create alert + run Claude for "Hva betyr dette for deg og hva bør du gjøre?" suggestion.
+- Store snapshots over time so trends and new reviews can be detected.
+- For own Google Business: Generate content + replies first. Add comment `// TODO: Full Google Business Profile API integration for direct publishing when user connects account`.
+- Central AI chat system prompt should include recent alerts/competitor summaries when relevant.
+
+**Extra quality touches:**
+- Onboarding wizard after signup (add first competitor or connect business)
+- Excellent empty states and loading states
+- Toast notifications
+- Responsive + great on mobile (PWA)
+- Clean, well-commented code + good folder structure
+- Comprehensive README with: env variables needed, Supabase SQL setup, how to run, deployment notes, and how to improve scraping later
+
+**Build order (do it step by step):**
+1. Initialize Next.js 15 project with the correct stack
+2. Set up Supabase + auth + protected routes
+3. Build the beautiful public landing page first (so it already looks professional)
+4. Create dashboard layout + sidebar
+5. Implement competitor add/list/detail + scraping + Places API + change detection + alerts
+6. Build Markedsføringsassistent module
+7. Add central AI chat with context
+8. Add PWA support + polish
+9. Write excellent README
+
+Start now by creating the project and the landing page. After the landing page is done, show me a summary of what you've built and ask what I want to adjust or continue with next.
+
+Make it production-quality, not a toy. Focus on real user value for Norwegian small business owners who don't have time.
