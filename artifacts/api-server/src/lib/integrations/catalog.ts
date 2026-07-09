@@ -45,7 +45,7 @@ export const PROVIDER_CATALOG: CatalogEntry[] = [
       "Koble til Google Kalender så nye hendelser automatisk blir til påminnelser.",
     category: "calendar",
     authType: "oauth",
-    implemented: false,
+    implemented: true,
   },
   {
     provider: "microsoft_outlook",

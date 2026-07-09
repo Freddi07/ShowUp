@@ -17,6 +17,7 @@ import pushRouter from "./push";
 import mobileOauthRouter from "./mobile-oauth";
 import onboardingRouter from "./onboarding";
 import integrationsRouter from "./integrations";
+import integrationsOauthRouter from "./integrations-oauth";
 
 const router: IRouter = Router();
 
@@ -56,6 +57,10 @@ router.use("/sms", smsRouter);
 
 // External ingest (public API-key endpoint + key management)
 router.use("/ingest", ingestRouter);
+
+// Public OAuth callback for calendar connectors (identity via signed state,
+// so it must be mounted BEFORE the session-authed integrations router).
+router.use("/integrations", integrationsOauthRouter);
 
 // Booking-source integrations (session-authed catalogue, status, sync, log)
 router.use("/integrations", integrationsRouter);

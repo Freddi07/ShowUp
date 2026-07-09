@@ -1,0 +1,66 @@
+Jeg bygger BookPling (Next.js + TypeScript + Prisma), en SaaS for automatiserte 
+kundepåminnelser via SMS/e-post/tale. Jeg vil legge til en AI-assistent i 
+dashbordet som fungerer som en ekspert-supportagent: den skal kjenne produktet 
+i detalj og hjelpe bedriftskunder å sette opp integrasjonene sine selv, uten 
+at jeg må gjøre det manuelt for hver kunde.
+
+ARKITEKTUR:
+- Bygg en chat-widget (flytende knapp nederst i dashbordet, åpner et 
+  sidepanel) som kaller Anthropic API via en backend-rute 
+  /api/assistant/chat
+- Bruk Claude (modell: claude-sonnet-4-6) med streaming-respons slik at 
+  svarene vises fortløpende i chatten
+- API-nøkkel skal ALDRI eksponeres til klienten — all kommunikasjon med 
+  Anthropic API skjer server-side
+
+SYSTEM-PROMPT (dette er kjernen — gi assistenten reell kunnskap):
+Bygg system-prompten dynamisk fra en fil /lib/assistant/knowledge.ts som 
+inneholder:
+- Full oversikt over BookPlings funksjoner (SMS/e-post/tale-påminnelser, 
+  når de sendes, hvordan man endrer tidspunkt)
+- Steg-for-steg oppsettsinstruksjoner for HVER integrasjonstype vi 
+  støtter: GENERIC_WEBHOOK, GOOGLE_CALENDAR, OUTLOOK_CALENDAR, CALENDLY, 
+  OPUS_DENTAL, EMAIL_PARSING — skriv disse som om du forklarer det til 
+  en bruker uten teknisk bakgrunn
+- Vanlige feilsituasjoner og hvordan de løses (f.eks. "webhook mottar 
+  ikke data", "e-post-parsing tolker feil dato")
+- Instruks om at assistenten ALDRI skal dikte opp funksjonalitet 
+  BookPling ikke har, og heller si "det kan jeg ikke hjelpe med, men du 
+  kan kontakte support" enn å gjette
+
+KONTEKSTBEVISSTHET (viktigst for at dette skal føles "ekspert" og ikke 
+generisk):
+- Før hver samtale starter, hent bedriftens faktiske Integration-status 
+  fra databasen (via Prisma) og inkluder det i system-prompten, f.eks: 
+  "Denne bedriften har koblet til GOOGLE_CALENDAR (status: CONNECTED) og 
+  har IKKE satt opp GENERIC_WEBHOOK ennå"
+- Dette gjør at assistenten kan si "Jeg ser du allerede har koblet til 
+  Google Kalender — vil du sette opp en backup-integrasjon også?" i 
+  stedet for å gi generiske svar
+
+FUNKSJONSKALL (tool use) — la assistenten faktisk utføre handlinger:
+- Gi Claude tilgang til disse verktøyene via Anthropic sin tool use:
+  1. `get_integration_status` — henter bedriftens tilkoblede 
+     integrasjoner fra databasen
+  2. `generate_webhook_credentials` — genererer og viser ny webhook-URL 
+     + secret direkte i chatten, uten at brukeren må navigere til 
+     Integrasjoner-siden selv
+  3. `start_oauth_flow` — returnerer riktig OAuth-lenke for Google/
+     Outlook/Calendly som brukeren kan klikke direkte i chatten
+  4. `test_integration` — trigger en testsynk og rapporterer resultatet 
+     tilbake i samtalen
+- Dette gjør assistenten til et faktisk verktøy for oppsett, ikke bare 
+  en FAQ-bot
+
+UI:
+- Chat-widgeten skal vise forslag til "hurtighandlinger" (knapper) basert 
+  på hvilke integrasjoner som mangler, f.eks. "Sett opp Google Kalender" 
+  som forhåndsutfylt melding
+- Vis en tydelig samtalehistorikk, og la brukeren starte på nytt
+
+KRAV:
+- Bygg og test GENERIC_WEBHOOK-flyten i chatten først (enklest å 
+  verifisere ende-til-ende), deretter legg til resten av verktøyene
+- Loggfør samtaler (uten sensitive tokens) slik at jeg kan se hvor 
+  brukere sitter fast, til produktforbedring
+- Følg eksisterende kodestil i prosjektet

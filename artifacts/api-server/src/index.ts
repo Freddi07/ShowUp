@@ -3,6 +3,7 @@ import { logger } from "./lib/logger";
 import { initStripe } from "./lib/stripe-init";
 import { startReminderScheduler } from "./lib/reminder-scheduler";
 import { registerBookingProviders } from "./lib/integrations/providers";
+import { startIntegrationSyncLoop } from "./lib/integrations/sync";
 
 const rawPort = process.env["PORT"];
 
@@ -27,6 +28,9 @@ registerBookingProviders();
 
 // Start the automatic reminder engine (polls for due reminders every minute).
 startReminderScheduler();
+
+// Start the calendar-integration polling loop (pulls new bookings every 5 min).
+startIntegrationSyncLoop();
 
 app.listen(port, (err) => {
   if (err) {

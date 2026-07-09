@@ -5,6 +5,7 @@
  */
 import { registerProvider } from "../registry";
 import { createGenericWebhookProvider } from "./generic-webhook";
+import { createGoogleCalendarProvider } from "./google-calendar";
 
 let registered = false;
 
@@ -12,4 +13,5 @@ export function registerBookingProviders(): void {
   if (registered) return;
   registered = true;
   registerProvider("generic_webhook", createGenericWebhookProvider);
+  registerProvider("google_calendar", createGoogleCalendarProvider);
 }

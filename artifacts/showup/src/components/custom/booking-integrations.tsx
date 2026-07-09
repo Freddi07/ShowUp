@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { BookOpen, CalendarClock, Link2, Plug, RefreshCw, Settings2 } from 'lucide-react';
+import { BookOpen, CalendarClock, Link2, Plug, RefreshCcw, RefreshCw, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiFetch } from '@/lib/api-client';
 import { Badge } from '@/components/ui/badge';
@@ -55,6 +55,15 @@ const STATUS_META: Record<
   disconnected: { label: 'Ikke tilkoblet', variant: 'outline' },
 };
 
+const CALLBACK_ERRORS: Record<string, string> = {
+  google_calendar_failed: 'Tilkoblingen til Google mislyktes. Prøv igjen.',
+  invalid_state: 'Tilkoblingen utløp. Prøv igjen.',
+  missing_params: 'Tilkoblingen ble avbrutt.',
+  encryption_not_configured:
+    'Kryptering er ikke konfigurert. Kontakt administrator.',
+  access_denied: 'Du avbrøt tilkoblingen hos leverandøren.',
+};
+
 function formatDateTime(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString('nb-NO', {
@@ -69,6 +78,53 @@ export function BookingIntegrations() {
   const queryClient = useQueryClient();
   const [webhookOpen, setWebhookOpen] = useState(false);
   const [guideProvider, setGuideProvider] = useState<string | null>(null);
+  const [oauthPending, setOauthPending] = useState<string | null>(null);
+
+  // Show the outcome of an OAuth callback (?connected=… / ?error=…) then clean
+  // it out of the URL so a refresh doesn't re-toast.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const connected = params.get('connected');
+    const error = params.get('error');
+    if (connected) {
+      toast.success('Tilkoblet', {
+        description: 'Kontoen din er koblet til. Nye bookinger kommer inn automatisk.',
+      });
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+      queryClient.invalidateQueries({ queryKey: ['integration-bookings'] });
+    } else if (error) {
+      toast.error('Tilkobling mislyktes', {
+        description: CALLBACK_ERRORS[error] ?? 'Noe gikk galt. Prøv igjen.',
+      });
+    }
+    if (connected || error) {
+      params.delete('connected');
+      params.delete('error');
+      const qs = params.toString();
+      window.history.replaceState(
+        {},
+        '',
+        window.location.pathname + (qs ? `?${qs}` : ''),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function connectOauth(provider: string) {
+    setOauthPending(provider);
+    try {
+      const { redirectUrl } = await apiFetch<{ redirectUrl: string }>(
+        `/api/integrations/${provider}/oauth-url`,
+      );
+      window.location.href = redirectUrl;
+    } catch (err) {
+      const cause = (err as { cause?: { error?: string } })?.cause;
+      toast.error('Kunne ikke starte tilkobling', {
+        description: cause?.error ?? 'Prøv igjen senere.',
+      });
+      setOauthPending(null);
+    }
+  }
 
   const integrations = useQuery({
     queryKey: ['integrations'],
@@ -112,6 +168,27 @@ export function BookingIntegrations() {
       toast.success('Koblet fra');
     },
     onError: () => toast.error('Kunne ikke koble fra'),
+  });
+
+  const sync = useMutation({
+    mutationFn: (provider: string) =>
+      apiFetch<{ created: number; deduped: number; fetched: number }>(
+        `/api/integrations/${provider}/sync`,
+        { method: 'POST' },
+      ),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['integrations'] });
+      queryClient.invalidateQueries({ queryKey: ['integration-bookings'] });
+      toast.success('Synk fullført', {
+        description: `${data.created} ny(e) booking(er), ${data.deduped} fra før.`,
+      });
+    },
+    onError: (err) => {
+      const cause = (err as { cause?: { error?: string } })?.cause;
+      toast.error('Testsynk feilet', {
+        description: cause?.error ?? 'Prøv igjen senere.',
+      });
+    },
   });
 
   const items = integrations.data?.items ?? [];
@@ -184,21 +261,43 @@ export function BookingIntegrations() {
                         </Button>
                       </>
                     ) : isConnected ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={disconnect.isPending}
-                        onClick={() => disconnect.mutate(item.provider)}
-                      >
-                        Koble fra
-                      </Button>
+                      <>
+                        {item.authType === 'oauth' ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={sync.isPending}
+                            onClick={() => sync.mutate(item.provider)}
+                          >
+                            <RefreshCcw className="size-4" />
+                            Test synk
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={disconnect.isPending}
+                          onClick={() => disconnect.mutate(item.provider)}
+                        >
+                          Koble fra
+                        </Button>
+                      </>
                     ) : item.implemented ? (
                       <Button
                         type="button"
                         size="sm"
-                        disabled={connect.isPending}
-                        onClick={() => connect.mutate(item.provider)}
+                        disabled={
+                          item.authType === 'oauth'
+                            ? oauthPending === item.provider
+                            : connect.isPending
+                        }
+                        onClick={() =>
+                          item.authType === 'oauth'
+                            ? connectOauth(item.provider)
+                            : connect.mutate(item.provider)
+                        }
                       >
                         <Link2 className="size-4" />
                         Koble til
