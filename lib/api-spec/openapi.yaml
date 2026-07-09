@@ -24,6 +24,8 @@ tags:
     description: Customer reply operations
   - name: templates
     description: Message template operations
+  - name: lokalradar
+    description: LokalRadar competitor monitoring & marketing operations
 paths:
   /healthz:
     get:
@@ -442,6 +444,196 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/NotificationSettings"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /lokalradar/overview:
+    get:
+      operationId: getLokalOverview
+      tags: [lokalradar]
+      summary: Dashboard summary for LokalRadar
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalOverview"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /lokalradar/business:
+    get:
+      operationId: getLokalBusiness
+      tags: [lokalradar]
+      summary: Get the signed-in user's business profile
+      responses:
+        "200":
+          description: Business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalBusiness"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    put:
+      operationId: updateLokalBusiness
+      tags: [lokalradar]
+      summary: Create or update the business profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalBusinessInput"
+      responses:
+        "200":
+          description: Updated business
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalBusiness"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /lokalradar/competitors:
+    get:
+      operationId: listLokalCompetitors
+      tags: [lokalradar]
+      summary: List tracked competitors
+      responses:
+        "200":
+          description: Competitor list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalCompetitorList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      operationId: createLokalCompetitor
+      tags: [lokalradar]
+      summary: Add a competitor to track
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalCompetitorInput"
+      responses:
+        "201":
+          description: Created competitor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalCompetitor"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Plan competitor limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/competitors/{id}:
+    delete:
+      operationId: deleteLokalCompetitor
+      tags: [lokalradar]
+      summary: Stop tracking a competitor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResult"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/alerts:
+    get:
+      operationId: listLokalAlerts
+      tags: [lokalradar]
+      summary: List alerts
+      responses:
+        "200":
+          description: Alert list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalAlertList"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /lokalradar/alerts/{id}:
+    patch:
+      operationId: updateLokalAlert
+      tags: [lokalradar]
+      summary: Mark an alert read or unread
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LokalAlertUpdate"
+      responses:
+        "200":
+          description: Updated alert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalAlert"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /lokalradar/generations:
+    get:
+      operationId: listLokalGenerations
+      tags: [lokalradar]
+      summary: List AI-generated marketing content
+      responses:
+        "200":
+          description: Generation list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LokalGenerationList"
         "401":
           $ref: "#/components/responses/Unauthorized"
 components:
@@ -970,3 +1162,167 @@ components:
         - totalCustomers
         - totalAppointments
         - appointmentsByStatus
+    LokalBusiness:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: ["string", "null"] }
+        orgNumber: { type: ["string", "null"] }
+        industry: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
+        googlePlaceId: { type: ["string", "null"] }
+        notifyEmail: { type: boolean }
+        notifyInApp: { type: boolean }
+        alertFrequency: { type: string }
+        onboardingCompleted: { type: boolean }
+        plan: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required:
+        - id
+        - name
+        - orgNumber
+        - industry
+        - location
+        - website
+        - googlePlaceId
+        - notifyEmail
+        - notifyInApp
+        - alertFrequency
+        - onboardingCompleted
+        - plan
+        - createdAt
+        - updatedAt
+    LokalBusinessInput:
+      type: object
+      properties:
+        name: { type: string }
+        orgNumber: { type: ["string", "null"] }
+        industry: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        website: { type: ["string", "null"] }
+        googlePlaceId: { type: ["string", "null"] }
+        notifyEmail: { type: boolean }
+        notifyInApp: { type: boolean }
+        alertFrequency: { type: string }
+        onboardingCompleted: { type: boolean }
+    LokalCompetitor:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        website: { type: ["string", "null"] }
+        googlePlaceId: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+        lastCheckedAt: { type: ["string", "null"], format: date-time }
+        createdAt: { type: string, format: date-time }
+      required:
+        - id
+        - name
+        - website
+        - googlePlaceId
+        - location
+        - notes
+        - lastCheckedAt
+        - createdAt
+    LokalCompetitorInput:
+      type: object
+      properties:
+        name: { type: string, minLength: 1 }
+        website: { type: ["string", "null"] }
+        googlePlaceId: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        notes: { type: ["string", "null"] }
+      required:
+        - name
+    LokalCompetitorList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LokalCompetitor"
+      required:
+        - items
+    LokalAlert:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string }
+        severity: { type: string }
+        title: { type: string }
+        body: { type: ["string", "null"] }
+        competitorId: { type: ["string", "null"] }
+        read: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required:
+        - id
+        - type
+        - severity
+        - title
+        - body
+        - competitorId
+        - read
+        - createdAt
+    LokalAlertUpdate:
+      type: object
+      properties:
+        read: { type: boolean }
+      required:
+        - read
+    LokalAlertList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LokalAlert"
+        unreadCount: { type: integer }
+      required:
+        - items
+        - unreadCount
+    LokalOverview:
+      type: object
+      properties:
+        competitorCount: { type: integer }
+        unreadAlertCount: { type: integer }
+        generationCountThisMonth: { type: integer }
+        reviewCount: { type: integer }
+        plan: { type: string }
+        competitorLimit: { type: ["integer", "null"] }
+        generationLimit: { type: ["integer", "null"] }
+      required:
+        - competitorCount
+        - unreadAlertCount
+        - generationCountThisMonth
+        - reviewCount
+        - plan
+        - competitorLimit
+        - generationLimit
+    LokalGeneration:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        channel: { type: ["string", "null"] }
+        prompt: { type: ["string", "null"] }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+      required:
+        - id
+        - kind
+        - channel
+        - prompt
+        - content
+        - createdAt
+    LokalGenerationList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/LokalGeneration"
+      required:
+        - items

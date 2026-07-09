@@ -6,3 +6,4 @@ export * from "./reminders";
 export * from "./messages";
 export * from "./settings";
 export * from "./assistant";
+export * from "./lokalradar";

@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/lokalradar/"
+title = "LokalRadar"
+version = "1.0.0"
+id = "artifacts/lokalradar"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/lokalradar/" ]
+localPort = 25477
+
+[services.development]
+run = "pnpm --filter @workspace/lokalradar run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/lokalradar", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/lokalradar/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25477"
+BASE_PATH = "/lokalradar/"

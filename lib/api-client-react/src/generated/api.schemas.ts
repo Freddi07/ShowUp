@@ -250,6 +250,129 @@ export interface AdminStats {
   appointmentsByStatus: AdminStatsAppointmentsByStatus;
 }
 
+export interface LokalBusiness {
+  id: string;
+  /** @nullable */
+  name: string | null;
+  /** @nullable */
+  orgNumber: string | null;
+  /** @nullable */
+  industry: string | null;
+  /** @nullable */
+  location: string | null;
+  /** @nullable */
+  website: string | null;
+  /** @nullable */
+  googlePlaceId: string | null;
+  notifyEmail: boolean;
+  notifyInApp: boolean;
+  alertFrequency: string;
+  onboardingCompleted: boolean;
+  plan: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LokalBusinessInput {
+  name?: string;
+  /** @nullable */
+  orgNumber?: string | null;
+  /** @nullable */
+  industry?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  googlePlaceId?: string | null;
+  notifyEmail?: boolean;
+  notifyInApp?: boolean;
+  alertFrequency?: string;
+  onboardingCompleted?: boolean;
+}
+
+export interface LokalCompetitor {
+  id: string;
+  name: string;
+  /** @nullable */
+  website: string | null;
+  /** @nullable */
+  googlePlaceId: string | null;
+  /** @nullable */
+  location: string | null;
+  /** @nullable */
+  notes: string | null;
+  /** @nullable */
+  lastCheckedAt: string | null;
+  createdAt: string;
+}
+
+export interface LokalCompetitorInput {
+  /** @minLength 1 */
+  name: string;
+  /** @nullable */
+  website?: string | null;
+  /** @nullable */
+  googlePlaceId?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  notes?: string | null;
+}
+
+export interface LokalCompetitorList {
+  items: LokalCompetitor[];
+}
+
+export interface LokalAlert {
+  id: string;
+  type: string;
+  severity: string;
+  title: string;
+  /** @nullable */
+  body: string | null;
+  /** @nullable */
+  competitorId: string | null;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface LokalAlertUpdate {
+  read: boolean;
+}
+
+export interface LokalAlertList {
+  items: LokalAlert[];
+  unreadCount: number;
+}
+
+export interface LokalOverview {
+  competitorCount: number;
+  unreadAlertCount: number;
+  generationCountThisMonth: number;
+  reviewCount: number;
+  plan: string;
+  /** @nullable */
+  competitorLimit: number | null;
+  /** @nullable */
+  generationLimit: number | null;
+}
+
+export interface LokalGeneration {
+  id: string;
+  kind: string;
+  /** @nullable */
+  channel: string | null;
+  /** @nullable */
+  prompt: string | null;
+  content: string;
+  createdAt: string;
+}
+
+export interface LokalGenerationList {
+  items: LokalGeneration[];
+}
+
 /**
  * Not authenticated
  */

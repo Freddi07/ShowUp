@@ -345,3 +345,183 @@ export const UpdateNotificationSettingsResponse = zod.object({
 })
 
 
+/**
+ * @summary Dashboard summary for LokalRadar
+ */
+export const GetLokalOverviewResponse = zod.object({
+  "competitorCount": zod.number(),
+  "unreadAlertCount": zod.number(),
+  "generationCountThisMonth": zod.number(),
+  "reviewCount": zod.number(),
+  "plan": zod.string(),
+  "competitorLimit": zod.number().nullable(),
+  "generationLimit": zod.number().nullable()
+})
+
+
+/**
+ * @summary Get the signed-in user's business profile
+ */
+export const GetLokalBusinessResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string().nullable(),
+  "orgNumber": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "googlePlaceId": zod.string().nullable(),
+  "notifyEmail": zod.boolean(),
+  "notifyInApp": zod.boolean(),
+  "alertFrequency": zod.string(),
+  "onboardingCompleted": zod.boolean(),
+  "plan": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Create or update the business profile
+ */
+export const UpdateLokalBusinessBody = zod.object({
+  "name": zod.string().optional(),
+  "orgNumber": zod.string().nullish(),
+  "industry": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "website": zod.string().nullish(),
+  "googlePlaceId": zod.string().nullish(),
+  "notifyEmail": zod.boolean().optional(),
+  "notifyInApp": zod.boolean().optional(),
+  "alertFrequency": zod.string().optional(),
+  "onboardingCompleted": zod.boolean().optional()
+})
+
+export const UpdateLokalBusinessResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string().nullable(),
+  "orgNumber": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "googlePlaceId": zod.string().nullable(),
+  "notifyEmail": zod.boolean(),
+  "notifyInApp": zod.boolean(),
+  "alertFrequency": zod.string(),
+  "onboardingCompleted": zod.boolean(),
+  "plan": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List tracked competitors
+ */
+export const ListLokalCompetitorsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "website": zod.string().nullable(),
+  "googlePlaceId": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "notes": zod.string().nullable(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Add a competitor to track
+ */
+
+
+
+export const CreateLokalCompetitorBody = zod.object({
+  "name": zod.string().min(1),
+  "website": zod.string().nullish(),
+  "googlePlaceId": zod.string().nullish(),
+  "location": zod.string().nullish(),
+  "notes": zod.string().nullish()
+})
+
+export const CreateLokalCompetitorResponse = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "website": zod.string().nullable(),
+  "googlePlaceId": zod.string().nullable(),
+  "location": zod.string().nullable(),
+  "notes": zod.string().nullable(),
+  "lastCheckedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Stop tracking a competitor
+ */
+export const DeleteLokalCompetitorParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const DeleteLokalCompetitorResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * @summary List alerts
+ */
+export const ListLokalAlertsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "severity": zod.string(),
+  "title": zod.string(),
+  "body": zod.string().nullable(),
+  "competitorId": zod.string().nullable(),
+  "read": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})),
+  "unreadCount": zod.number()
+})
+
+
+/**
+ * @summary Mark an alert read or unread
+ */
+export const UpdateLokalAlertParams = zod.object({
+  "id": zod.coerce.string()
+})
+
+export const UpdateLokalAlertBody = zod.object({
+  "read": zod.boolean()
+})
+
+export const UpdateLokalAlertResponse = zod.object({
+  "id": zod.string(),
+  "type": zod.string(),
+  "severity": zod.string(),
+  "title": zod.string(),
+  "body": zod.string().nullable(),
+  "competitorId": zod.string().nullable(),
+  "read": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List AI-generated marketing content
+ */
+export const ListLokalGenerationsResponse = zod.object({
+  "items": zod.array(zod.object({
+  "id": zod.string(),
+  "kind": zod.string(),
+  "channel": zod.string().nullable(),
+  "prompt": zod.string().nullable(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
