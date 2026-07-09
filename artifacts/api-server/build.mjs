@@ -10,15 +10,21 @@ globalThis.require = createRequire(import.meta.url);
 
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
+// The serverless bundle (for Vercel) must be fully self-contained: on a
+// serverless host there is no reliable node_modules next to the function. The
+// only real runtime external in our import graph is `stripe-replit-sync`, whose
+// on-disk `.sql` reads happen ONLY inside runMigrations() — which the serverless
+// entry never calls — so it is safe to inline. We therefore drop it from the
+// externals for serverless.ts while keeping it external for the long-running
+// Replit entry (src/index.ts calls runMigrations and needs it on disk).
+const serverlessExternal = (external) =>
+  external.filter((e) => e !== "stripe-replit-sync");
+
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
 
-  await esbuild({
-    entryPoints: [
-      path.resolve(artifactDir, "src/index.ts"),
-      path.resolve(artifactDir, "src/serverless.ts"),
-    ],
+  const common = {
     platform: "node",
     bundle: true,
     format: "esm",
@@ -121,6 +127,21 @@ globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
     `,
     },
+  };
+
+  // Long-running Replit server: keep the full external list (index.ts calls
+  // runMigrations, which reads stripe-replit-sync's .sql files from disk).
+  await esbuild({
+    ...common,
+    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+  });
+
+  // Vercel serverless entry: inline stripe-replit-sync so the output has no
+  // runtime node_modules dependency (fully self-contained handler).
+  await esbuild({
+    ...common,
+    entryPoints: [path.resolve(artifactDir, "src/serverless.ts")],
+    external: serverlessExternal(common.external),
   });
 }
 
