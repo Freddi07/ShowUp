@@ -16,9 +16,24 @@ without any cross-origin configuration.
 ## 1. Import the repo into Vercel
 
 In the Vercel dashboard: **Add New… → Project → Import** the GitHub repo.
-Leave the **Root Directory** as the repository root (do NOT set it to a
-subfolder — `vercel.json` at the root drives the build). Vercel auto-detects
-pnpm from the lockfile.
+
+> **⚠️ Root Directory MUST be the repository root.**
+> In **Project → Settings → Build & Deployment → Root Directory**, leave it
+> **empty / `./`**. Do **not** set it to `artifacts/api-server`,
+> `artifacts/lokalradar`, or any subfolder.
+>
+> The root is where `vercel.json`, the `api/` serverless function, the
+> `vercel-build` script, and the frontend output all live. If the Root
+> Directory points at a subfolder, the build fails with:
+>
+> ```
+> ERR_PNPM_NO_SCRIPT  Missing script: vercel-build
+> ```
+>
+> Fix it by clearing the Root Directory (set it back to the repo root) and
+> redeploying.
+
+Vercel auto-detects pnpm from the lockfile.
 
 ## 2. Required environment variables
 

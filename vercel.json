@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm run vercel-build",
+  "buildCommand": "pnpm -w run vercel-build",
   "outputDirectory": "artifacts/lokalradar/dist/public",
   "rewrites": [
     { "source": "/((?!api($|/)).*)", "destination": "/index.html" }
