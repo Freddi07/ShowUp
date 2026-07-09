@@ -16,6 +16,7 @@ import notificationSettingsRouter from "./notification-settings";
 import pushRouter from "./push";
 import mobileOauthRouter from "./mobile-oauth";
 import onboardingRouter from "./onboarding";
+import integrationsRouter from "./integrations";
 
 const router: IRouter = Router();
 
@@ -55,6 +56,9 @@ router.use("/sms", smsRouter);
 
 // External ingest (public API-key endpoint + key management)
 router.use("/ingest", ingestRouter);
+
+// Booking-source integrations (session-authed catalogue, status, sync, log)
+router.use("/integrations", integrationsRouter);
 
 // App data shared by web + mobile (mobile-facing read endpoints)
 router.use("/me", meRouter);

@@ -1,9 +1,14 @@
 import { Router } from "express";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { appointmentTable, customerTable } from "@workspace/db/schema";
+import {
+  appointmentTable,
+  customerTable,
+  scheduledReminderTable,
+} from "@workspace/db/schema";
 import { requireUser } from "../middlewares/require-user";
 import { sendSms } from "../lib/twilio";
+import { enqueueRemindersForAppointment } from "../lib/reminders";
 
 const router = Router();
 router.use(requireUser);
@@ -136,6 +141,13 @@ router.post("/", async (req, res) => {
       })
       .returning();
 
+    // Schedule automatic reminders (best-effort; never blocks creation).
+    try {
+      await enqueueRemindersForAppointment(created, userId);
+    } catch (e) {
+      console.error("[appointments] enqueue reminders failed:", e);
+    }
+
     res.status(201).json(serialize(created));
   } catch (err) {
     console.error("[appointments] create error:", err);
@@ -262,6 +274,21 @@ router.post("/:id/remind", async (req, res) => {
       .set({ status: "REMINDED", twilioSid: sid, updatedAt: new Date() })
       .where(eq(appointmentTable.id, appt.id))
       .returning();
+
+    // A manual reminder supersedes any still-pending automatic ones.
+    await db
+      .update(scheduledReminderTable)
+      .set({
+        status: "SKIPPED",
+        lastError: "Manual reminder sent",
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(scheduledReminderTable.appointmentId, appt.id),
+          eq(scheduledReminderTable.status, "PENDING"),
+        ),
+      );
 
     res.json(serialize(updated));
   } catch (err) {

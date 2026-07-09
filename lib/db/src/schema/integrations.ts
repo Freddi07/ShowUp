@@ -12,6 +12,11 @@ export const integrationProviderEnum = pgEnum("IntegrationProvider", [
   "visma",
   "fiken",
   "cliniko",
+  // Booking-source providers added for the integrations foundation.
+  "generic_webhook",
+  "timma",
+  "onlinebooq",
+  "calendly",
 ]);
 export type IntegrationProvider = (typeof integrationProviderEnum.enumValues)[number];
 
@@ -31,6 +36,10 @@ export const integrationTable = pgTable(
     provider: integrationProviderEnum("provider").notNull(),
     status: integrationStatusEnum("status").notNull().default("disconnected"),
     credentialsEncrypted: text("credentialsEncrypted").notNull().default(""),
+    /** External account/resource id (e.g. calendar id). Non-secret. */
+    externalAccountId: text("externalAccountId"),
+    /** Last sync/connection error message shown in the dashboard (non-secret). */
+    lastError: text("lastError"),
     lastSyncedAt: timestamp("lastSyncedAt"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
     updatedAt: timestamp("updatedAt").notNull().defaultNow(),

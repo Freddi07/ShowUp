@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ApiIngestCard } from './api-ingest-card';
+import { BookingIntegrations } from './booking-integrations';
 import { ImportCustomersDialog } from './import-customers-dialog';
 import { PlatformGuides } from './platform-guides';
 
@@ -43,6 +44,8 @@ export function IntegrationsPage() {
           ved å koble til automatisk via API/Zapier.
         </p>
       </div>
+
+      <BookingIntegrations />
 
       <CsvImportCard />
 
