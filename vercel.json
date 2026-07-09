@@ -3,6 +3,6 @@
   "buildCommand": "pnpm run vercel-build",
   "outputDirectory": "artifacts/lokalradar/dist/public",
   "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
+    { "source": "/((?!api($|/)).*)", "destination": "/index.html" }
   ]
 }
